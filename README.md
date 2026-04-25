@@ -127,6 +127,5 @@ Planned:
 This module is intended for internal use and experimentation.
 
 ## Author
-
-Scandiweb
->>>>>>> b9db44ab11202338311e73e0b883a23e2ac62831
+Samuel Goodey
+sw
