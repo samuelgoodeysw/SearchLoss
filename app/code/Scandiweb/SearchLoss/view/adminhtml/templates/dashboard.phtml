@@ -1,0 +1,91 @@
+<?php
+$summary = $block->getSummary();
+$currentPeriod = $block->getCurrentPeriod();
+
+function activeStyle($current, $period) {
+    return $current === $period
+        ? 'background:#eb5202;color:#fff;border-color:#eb5202;'
+        : 'background:#fff;color:#333;';
+}
+?>
+
+<h2>Search Loss Overview</h2>
+
+<div style="margin-bottom:20px;">
+    <a href="?period=all" style="padding:8px 12px;border:1px solid #ccc;text-decoration:none;<?= activeStyle($currentPeriod, 'all') ?>">All time</a>
+    <a href="?period=7" style="padding:8px 12px;border:1px solid #ccc;text-decoration:none;<?= activeStyle($currentPeriod, '7') ?>">Last 7 days</a>
+    <a href="?period=30" style="padding:8px 12px;border:1px solid #ccc;text-decoration:none;<?= activeStyle($currentPeriod, '30') ?>">Last 30 days</a>
+</div>
+
+<div style="display:flex; gap:16px; margin-bottom:24px;">
+    <div style="padding:16px; background:#fff; border:1px solid #ddd;">
+        <strong>Failed Terms</strong><br>
+        <?= (int)$summary['failed_terms'] ?>
+    </div>
+
+    <div style="padding:16px; background:#fff; border:1px solid #ddd;">
+        <strong>Failed Searches</strong><br>
+        <?= (int)$summary['failed_searches'] ?>
+    </div>
+
+    <div style="padding:16px; background:#fff; border:1px solid #ddd;">
+        <strong>Est. Lost Revenue</strong><br>
+        $<?= number_format($summary['lost_revenue'], 2) ?>
+    </div>
+
+    <div style="padding:16px; background:#fff; border:1px solid #ddd;">
+        <strong>AOV</strong><br>
+        $<?= number_format($summary['aov'], 2) ?>
+    </div>
+
+    <div style="padding:16px; background:#fff; border:1px solid #ddd;">
+        <strong>Conversion Rate</strong><br>
+        <?= number_format($summary['conversion_rate'], 2) ?>%
+    </div>
+</div>
+
+<h2>🚨 Failed Search Terms (Zero Results)</h2>
+
+<table border="1" cellpadding="5">
+    <tr>
+        <th>Search Term</th>
+        <th>Search Count</th>
+        <th>Updated</th>
+        <th>💸 Est. Lost Revenue</th>
+    </tr>
+
+    <?php foreach ($block->getFailedSearchTerms() as $term): ?>
+        <tr style="background-color:#ffe6e6;">
+            <td><?= $block->escapeHtml($term['query_text']) ?></td>
+            <td><?= (int)$term['popularity'] ?></td>
+            <td><?= $block->escapeHtml($term['updated_at']) ?></td>
+            <td>$<?= number_format($term['lost_revenue'], 2) ?></td>
+        </tr>
+    <?php endforeach; ?>
+</table>
+
+<br><br>
+
+<h2>⚠️ Weak Search Terms (Results exist but likely poor)</h2>
+
+<table border="1" cellpadding="5">
+    <tr>
+        <th>Search Term</th>
+        <th>Results</th>
+        <th>Search Count</th>
+        <th>Updated</th>
+        <th>Opportunity Score</th>
+        <th>Result Density</th>
+    </tr>
+
+    <?php foreach ($block->getWeakSearchTerms() as $term): ?>
+        <tr style="background-color:#fff3cd;">
+            <td><?= $block->escapeHtml($term['query_text']) ?></td>
+            <td><?= (int)$term['num_results'] ?></td>
+            <td><?= (int)$term['popularity'] ?></td>
+            <td><?= $block->escapeHtml($term['updated_at']) ?></td>
+            <td><?= $term['opportunity_score'] ?></td>
+            <td><?= $term['result_density'] ?></td>
+        </tr>
+    <?php endforeach; ?>
+</table>
