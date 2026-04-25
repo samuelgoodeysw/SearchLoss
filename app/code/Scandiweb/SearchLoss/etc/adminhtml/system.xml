@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <tab id="scandiweb" translate="label" sortOrder="500">
+            <label>Scandiweb</label>
+        </tab>
+
+        <section id="searchloss" translate="label" type="text" sortOrder="100"
+                 showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Search Loss</label>
+            <tab>scandiweb</tab>
+            <resource>Scandiweb_SearchLoss::searchloss</resource>
+
+            <group id="ga4" translate="label" type="text" sortOrder="10"
+                   showInDefault="1" showInWebsite="1" showInStore="0">
+                <label>GA4 Integration</label>
+
+                <field id="enabled" translate="label" type="select" sortOrder="10"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Enable GA4 Sync</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+
+                <field id="property_id" translate="label" type="text" sortOrder="20"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>GA4 Property ID</label>
+                </field>
+
+                <field id="credentials_json" translate="label" type="textarea" sortOrder="30"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Service Account Credentials JSON</label>
+                    <comment><![CDATA[Paste service account JSON for Google Analytics Data API. For local/demo use only. Later this should be encrypted.]]></comment>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>
