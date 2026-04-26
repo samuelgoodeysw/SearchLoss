@@ -282,10 +282,10 @@ class SearchLossDataProvider
         return [
             ['label' => 'Search words checked', 'value' => empty($tokens) ? 'None' : implode(', ', $tokens)],
             ['label' => 'SKU matches', 'value' => (string)$signals['skuMatches']],
-            ['label' => 'Exact product matches', 'value' => (string)$signals['productNameMatches']],
-            ['label' => 'Related product matches', 'value' => (string)$relatedProductMatches],
-            ['label' => 'Exact category matches', 'value' => (string)$signals['categoryNameMatches']],
-            ['label' => 'Related category matches', 'value' => (string)$relatedCategoryMatches],
+            ['label' => 'Full-phrase product matches', 'value' => (string)$signals['productNameMatches']],
+            ['label' => 'Keyword product matches', 'value' => (string)$relatedProductMatches],
+            ['label' => 'Full-phrase category matches', 'value' => (string)$signals['categoryNameMatches']],
+            ['label' => 'Keyword category matches', 'value' => (string)$relatedCategoryMatches],
             ['label' => 'Catalog signal', 'value' => $status],
             ['label' => 'What this suggests', 'value' => $suggestion],
         ];
@@ -393,6 +393,41 @@ class SearchLossDataProvider
                     'Check whether "%s" maps to a product, category, SKU, brand, synonym, redirect, compatibility need, or catalog gap. If it repeats or has high revenue at risk, assign it to a clearer fix type after review.',
                     $cleanTerm
                 );
+        }
+    }
+
+    private function getShortSuggestedAction(string $term, string $fixType): string
+    {
+        switch ($fixType) {
+            case 'Product exists but is not showing':
+                return 'Review search indexing, searchable attributes, and result visibility.';
+
+            case 'Brand or product terms are missing':
+                return 'Add missing brand or product terms to searchable product data.';
+
+            case 'Customers use different wording':
+                return 'Map customer wording to the catalog language with safe synonyms.';
+
+            case 'SKU or part number is not matching':
+                return 'Review SKU, part-number, and alternate identifier search matching.';
+
+            case 'Product or category may be missing':
+                return 'Review catalog coverage or route customers to the closest category.';
+
+            case 'Spelling or format variant':
+                return 'Add safe spelling, spacing, punctuation, or format variants.';
+
+            case 'Fitment or use case is unclear':
+                return 'Improve fitment, compatibility, size, or use-case product data.';
+
+            case 'Search term is too broad or unclear':
+                return 'Improve categories, filters, suggestions, and result ordering.';
+
+            case 'Results are weak or badly ranked':
+                return 'Review result ranking, searchable attributes, and merchandising rules.';
+
+            default:
+                return 'Review matching products, categories, synonyms, redirects, and product data.';
         }
     }
 
@@ -737,6 +772,7 @@ class SearchLossDataProvider
                 'opportunityScore' => $this->getOpportunityScore($count, $lostRevenue),
                 'fixType' => $fixType,
                 'suggestedFix' => $this->getSuggestedFix($termText, $fixType),
+                'shortSuggestedAction' => $this->getShortSuggestedAction($termText, $fixType),
                 'plainEnglishMeaning' => $this->getPlainEnglishMeaning($termText, $fixType),
                 'magentoFixSteps' => $this->getMagentoFixSteps($termText, $fixType),
                 'catalogEvidence' => $this->getCatalogEvidence($termText),
