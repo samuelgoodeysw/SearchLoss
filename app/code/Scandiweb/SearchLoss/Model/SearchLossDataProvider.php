@@ -117,6 +117,8 @@ class SearchLossDataProvider
         $productEntityTable = $this->resource->getTableName('catalog_product_entity');
         $productVarcharTable = $this->resource->getTableName('catalog_product_entity_varchar');
         $productIntTable = $this->resource->getTableName('catalog_product_entity_int');
+        $productWebsiteTable = $this->resource->getTableName('catalog_product_website');
+        $productCategoryTable = $this->resource->getTableName('catalog_category_product');
 
         $nameAttributeId = $this->getProductAttributeId('name');
         $statusAttributeId = $this->getProductAttributeId('status');
@@ -129,6 +131,10 @@ class SearchLossDataProvider
                 'disabledProducts' => 0,
                 'visibleInSearch' => 0,
                 'notVisibleInSearch' => 0,
+                'assignedToWebsite' => 0,
+                'notAssignedToWebsite' => 0,
+                'assignedToCategory' => 0,
+                'notAssignedToCategory' => 0,
             ];
         }
 
@@ -165,6 +171,10 @@ class SearchLossDataProvider
                 'disabledProducts' => 0,
                 'visibleInSearch' => 0,
                 'notVisibleInSearch' => 0,
+                'assignedToWebsite' => 0,
+                'notAssignedToWebsite' => 0,
+                'assignedToCategory' => 0,
+                'notAssignedToCategory' => 0,
             ];
         }
 
@@ -209,12 +219,32 @@ class SearchLossDataProvider
             );
         }
 
+
+        $assignedToWebsite = (int)$connection->fetchOne(
+            $connection->select()
+                ->from($productWebsiteTable, ['total' => 'COUNT(DISTINCT product_id)'])
+                ->where('product_id IN (?)', $productIds)
+        );
+
+        $assignedToCategory = (int)$connection->fetchOne(
+            $connection->select()
+                ->from($productCategoryTable, ['total' => 'COUNT(DISTINCT product_id)'])
+                ->where('product_id IN (?)', $productIds)
+        );
+
+        $notAssignedToWebsite = max(0, count($productIds) - $assignedToWebsite);
+        $notAssignedToCategory = max(0, count($productIds) - $assignedToCategory);
+
         return [
             'relatedProductsChecked' => count($productIds),
             'enabledProducts' => $enabledProducts,
             'disabledProducts' => $disabledProducts,
             'visibleInSearch' => $visibleInSearch,
             'notVisibleInSearch' => $notVisibleInSearch,
+            'assignedToWebsite' => $assignedToWebsite,
+            'notAssignedToWebsite' => $notAssignedToWebsite,
+            'assignedToCategory' => $assignedToCategory,
+            'notAssignedToCategory' => $notAssignedToCategory,
         ];
     }
 
@@ -417,6 +447,10 @@ class SearchLossDataProvider
             ['label' => 'Disabled product matches', 'value' => (string)$visibilitySignals['disabledProducts']],
             ['label' => 'Visible in search', 'value' => (string)$visibilitySignals['visibleInSearch']],
             ['label' => 'Not visible in search', 'value' => (string)$visibilitySignals['notVisibleInSearch']],
+            ['label' => 'Assigned to website', 'value' => (string)$visibilitySignals['assignedToWebsite']],
+            ['label' => 'Not assigned to website', 'value' => (string)$visibilitySignals['notAssignedToWebsite']],
+            ['label' => 'Assigned to category', 'value' => (string)$visibilitySignals['assignedToCategory']],
+            ['label' => 'Not assigned to category', 'value' => (string)$visibilitySignals['notAssignedToCategory']],
             ['label' => 'Full-phrase category matches', 'value' => (string)$signals['categoryNameMatches']],
             ['label' => 'Keyword category matches', 'value' => (string)$relatedCategoryMatches],
             ['label' => 'Catalog signal', 'value' => $status],
