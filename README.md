@@ -1,123 +1,189 @@
-# Search Loss
+# Search Loss for Magento 2
 
-Search Loss is a Magento 2 admin module that helps merchants find missed revenue opportunities caused by failed site searches.
+Search Loss is a Magento-native admin module that helps merchants identify where site search is leaking demand.
 
-A failed search is a customer search that returned zero Magento results.
+It finds failed searches, estimates revenue at risk, checks Magento catalogue signals, and recommends practical review steps so teams can decide what to fix first.
 
-Search Loss turns those failed searches into a prioritized action list by showing:
+## What Search Loss helps answer
 
-- what customers searched for
-- how often the search failed
-- estimated revenue at risk
-- likely issue type
-- confidence level
-- catalog evidence from Magento
-- recommended Magento checks and fixes
-
-The goal is simple:
-
-Show where Magento search is silently losing demand, estimate the commercial value, and tell the merchant what to fix first.
-
----
-
-## What Search Loss Does
-
-Search Loss analyzes Magento search data and highlights missed demand.
-
-It helps answer questions such as:
-
-- Which customer searches returned zero results?
+- What are customers searching for but not finding?
 - Which failed searches happen most often?
 - Which failed searches may represent the most revenue at risk?
-- Does Magento already have related product, SKU, or category data?
-- Is the issue likely a catalog gap, product data issue, synonym issue, SKU issue, or search configuration issue?
-- What should the merchant review or fix first?
+- Does Magento already contain related product, SKU, or category data?
+- Is the issue likely to be missing catalogue coverage, weak product data, missing synonyms, SKU matching, or search configuration?
+- Which fixes should be reviewed first?
 
----
+## Product positioning
 
-## Current Admin Location
+Search Loss is not a replacement for search platforms such as Algolia, Klevu, Adobe Live Search, Searchspring, or similar tools.
 
-Search Loss is available inside Magento Admin.
+Those tools mainly improve the search experience itself through relevance, autocomplete, typo tolerance, merchandising, ranking, and behavioural analytics.
 
-Current location:
+Search Loss is different.
 
+It is a diagnostic and opportunity layer for Magento. It shows where search may be failing, what that missed demand may be worth, what Magento catalogue evidence suggests, and what the merchant should review first.
+
+## Current module status
+
+Current admin location:
+
+```text
 Reports -> Search Loss
+```
 
-The admin page includes:
+Current module path:
 
-- dashboard summary cards
-- insight cards
-- top opportunity card
-- ranked search opportunities table
-- search/filter controls
-- priority filter
-- issue type filter
-- sort dropdown
-- clickable table sorting
-- reset button
+```text
+app/code/Scandiweb/SearchLoss
+```
+
+Main data provider:
+
+```text
+app/code/Scandiweb/SearchLoss/Model/SearchLossDataProvider.php
+```
+
+Main admin template:
+
+```text
+app/code/Scandiweb/SearchLoss/view/adminhtml/templates/dashboard.phtml
+```
+
+REST endpoint:
+
+```text
+/rest/V1/search-loss/dashboard
+```
+
+The same `SearchLossDataProvider` powers both the Magento admin dashboard and the REST API response, which keeps the admin UI and external dashboard data aligned.
+
+## Current features
+
+The Magento admin dashboard currently includes:
+
+- Hero section explaining the failed-search opportunity
+- KPI cards
+- Commercial insight cards
+- Top opportunity summary
+- Period controls
+- Ranked opportunities table
+- Search/filter bar
+- Priority filter
+- Issue type filter
+- Sort dropdown
+- Clickable sortable table headers
+- Reset button
 - CSV export
-- expandable diagnostic rows
-- tooltip explanations
+- Expandable diagnostic rows
+- Tooltips across KPI, table, and catalogue signal areas
+- Compact shortcuts inside the recommended fix area
 
----
+## KPI cards
 
-## Current Features
+The top KPI cards show:
 
-### Failed Search Detection
+- Failed Terms
+- Failed Searches
+- Revenue at Risk
+- Average Order Value
+- Search-to-order Rate
 
-Search Loss reads Magento search query data and identifies customer searches that returned zero results.
+Revenue at risk is directional. It is not guaranteed lost revenue.
 
-It uses Magento's `search_query` table.
+Current model:
 
-Important fields include:
+```text
+failed search count x average order value x search-to-order rate
+```
 
-- `query_text`
-- `num_results`
-- `popularity`
-- `updated_at`
+## Opportunity table
 
-A failed search is currently defined as:
+The main table shows:
 
-- `num_results = 0`
+- Term
+- Searches
+- Revenue at Risk
+- Priority
+- Issue Type
+- Confidence
+- Suggested Action
+- Details
 
----
+The table is designed as the scan layer. It helps a merchant quickly see which search issues are most important.
 
-### Revenue at Risk
+The expanded row is the detail layer. It explains the diagnosis, catalogue evidence, recommended fix, and useful review shortcuts.
 
-Search Loss estimates revenue at risk for failed searches.
+## Expanded diagnostic rows
 
-The model currently uses:
+Each opportunity can be expanded.
 
-- failed search count
-- average order value
-- search-to-order rate
+Expanded rows currently contain three main areas:
 
-This is a directional estimate, not guaranteed lost revenue.
+1. Diagnosis
+2. Catalogue Signal
+3. Recommended Fix
 
-The purpose is to help merchants prioritize which failed searches are commercially worth reviewing first.
+### Diagnosis
 
----
+Plain-English explanation of what the failed search likely means.
 
-### Opportunity Ranking
+### Catalogue Signal
 
-Each failed search is ranked using:
+Magento evidence showing whether related catalogue data appears to exist.
 
-- search demand
-- estimated revenue at risk
-- likely issue type
-- confidence level
+Current catalogue signal fields include:
 
-Opportunity priority is currently shown as:
+- Search words checked
+- SKU matches
+- Full-phrase product matches
+- Keyword product matches
+- Full-phrase category matches
+- Keyword category matches
+- Catalogue signal
+- What this suggests
 
-- High
-- Medium
-- Low
+This matters because a failed search can mean different things.
 
----
+If Magento returned zero results and no related catalogue data was found, it may indicate a true catalogue gap.
 
-### Issue Type Classification
+If Magento returned zero results but related catalogue data was found, it may indicate weak product naming, missing synonyms, poor searchable attributes, indexing issues, or search configuration problems.
 
-Search Loss assigns a likely issue type to each failed search.
+### Recommended Fix
+
+Shows the full recommended review/fix steps.
+
+This section also includes compact shortcuts such as:
+
+- Products
+- Categories
+- Search terms
+- Indexes
+- Cache
+
+These are review shortcuts only. Search Loss does not automatically change catalogue, checkout, order, customer, search, or storefront data.
+
+## Current data sources
+
+The module currently uses Magento-native data:
+
+- `search_query`
+- `sales_order`
+- `catalog_product_entity`
+- `catalog_product_entity_varchar`
+- `catalog_category_entity_varchar`
+- `eav_attribute`
+- `eav_entity_type`
+
+Current usage:
+
+- `search_query` provides failed search terms, popularity, result count, and update time.
+- `sales_order` helps estimate average order value and order count.
+- Product/category EAV data helps detect catalogue signal evidence.
+- SKU, product, and category matching support diagnosis and recommendations.
+
+## Current recommendation logic
+
+The recommendation logic is rule-based and Magento-aware.
 
 Current issue types include:
 
@@ -132,373 +198,385 @@ Current issue types include:
 - Results are weak or badly ranked
 - Needs manual review
 
-The recommendation logic is currently rule-based and Magento-aware.
+The module checks catalogue data before presenting recommendations. This makes the output more useful than generic search advice.
 
----
-
-### Catalog Signal Evidence
-
-Expanded rows include a Catalog Signal section.
-
-This checks whether the failed search term appears to have related Magento catalog data.
-
-Current checks include:
-
-- search words checked
-- SKU matches
-- full-phrase product matches
-- keyword product matches
-- full-phrase category matches
-- keyword category matches
-- catalog signal summary
-- what the signal suggests
-
-This helps separate two different problems:
-
-1. Magento returned zero results and no related catalog signal exists  
-   This may indicate a missing product, missing category, or true catalog demand gap.
-
-2. Magento returned zero results but related catalog data exists  
-   This may indicate weak product naming, missing synonyms, poor searchable attributes, indexing issues, or search ranking problems.
-
-This is what makes Search Loss more useful than a simple zero-results report.
-
----
-
-### Recommended Fixes
-
-Each opportunity includes a short action in the main table and a fuller recommendation inside the expanded row.
-
-The expanded row currently includes:
-
-- Diagnosis
-- Catalog Signal
-- Recommended Fix
-
-Recommended fixes may include:
-
-- confirm whether the store sells the searched product
-- improve product naming
-- improve searchable attributes
-- review SKU and part-number matching
-- add safe synonyms
-- route customers to the closest category or landing page
-- treat repeated searches as catalog demand
-- reindex Magento search and test again
-
----
-
-### Filters, Sorting, and Export
-
-The opportunities table includes:
-
-- search term filter
-- priority filter
-- issue type filter
-- sort dropdown
-- clickable sortable headers
-- reset filters
-- CSV export
-
-CSV export is useful for:
-
-- sharing the opportunity list
-- reviewing with merchandising teams
-- creating tickets
-- prioritizing fixes
-- using the data in spreadsheets
-
----
-
-## Market Positioning
-
-Search Loss is not intended to replace dedicated search platforms such as Algolia, Klevu, Adobe Live Search, or similar tools.
-
-Those platforms mainly focus on improving the search experience itself, including:
-
-- relevance
-- autocomplete
-- typo tolerance
-- merchandising
-- product ranking
-- click behavior
-- conversion analytics
-
-Search Loss is different.
-
-Search Loss is a Magento-native diagnostic and opportunity layer. Its purpose is to show where Magento search may be leaking demand, estimate the commercial value of those missed searches, and help merchants understand what to fix first.
-
-In simple terms:
-
-Magento native search reports give basic search term visibility.
-
-Algolia, Klevu, Adobe Live Search, and similar platforms provide search engine functionality, ranking, merchandising, and search analytics.
-
-Search Loss provides missed-demand diagnosis, revenue opportunity scoring, catalog evidence, and Magento fix recommendations.
-
-Search Loss is best positioned as a low-friction diagnostic layer before, during, or after a larger search improvement project.
-
-It can help a merchant decide whether they need:
-
-- better product data
-- better category routing
-- synonym improvements
-- searchable attribute changes
-- catalog expansion
-- search configuration fixes
-- or a larger search platform implementation
-
-This makes Search Loss useful even when a merchant later adopts a third-party search tool. It identifies the missed demand and commercial opportunity behind the search problem.
-
----
-
-## Why This Is Useful
-
-Many merchants know search matters, but they do not always know where search is failing.
-
-Magento may already record failed search terms, but raw search term data is not enough.
-
-Search Loss adds the commercial and operational layer:
-
-- how often the search failed
-- what it might be worth
-- whether the catalog has related data
-- what kind of issue it likely is
-- what the merchant should review first
-
-The product is designed to move from analytics to action.
-
----
-
-## Current Data Sources
-
-Search Loss currently uses Magento data.
-
-Current sources include:
-
-- Magento `search_query` table
-- Magento order data
-- Magento product data
-- Magento category data
-- Magento EAV product/category name attributes
-
-Used for:
-
-- failed search terms
-- search popularity
-- date filtering
-- average order value
-- revenue-at-risk modeling
-- SKU matching
-- product-name matching
-- category-name matching
-- related keyword matching
-
----
-
-## Current Architecture
-
-Search Loss currently has a shared Magento data provider.
-
-Main provider:
-
-`app/code/Scandiweb/SearchLoss/Model/SearchLossDataProvider.php`
-
-The provider is used by:
-
-- the Magento admin dashboard
-- the Search Loss REST API endpoint
-
-This keeps the admin page and API response aligned.
-
----
-
-## REST API Endpoint
-
-Search Loss exposes a Magento REST endpoint.
+## Current REST API
 
 Endpoint:
 
-`/rest/V1/search-loss/dashboard`
+```text
+/rest/V1/search-loss/dashboard
+```
 
-This endpoint returns Search Loss dashboard data including:
+Example response structure:
 
-- search summary data
-- failed search opportunities
-- revenue-at-risk values
-- issue types
-- suggested fixes
-- confidence
-- catalog evidence
-- Magento fix steps
+```json
+[
+  {
+    "key": "searchData",
+    "value": {
+      "totalSearches": 335,
+      "failedSearches": 156,
+      "zeroResultRate": 46.57,
+      "searchToOrderRate": 6.27,
+      "averageOrderValue": 424.33,
+      "modeledDemandLost": 4149.6
+    }
+  },
+  {
+    "key": "failedSearchTerms",
+    "value": [
+      {
+        "term": "boat trailer axle",
+        "count": 21,
+        "lostRevenue": 558.6,
+        "opportunityScore": "High",
+        "fixType": "Product or category may be missing",
+        "suggestedFix": "Check whether the store sells this product, an equivalent product, or a close substitute.",
+        "confidence": "High",
+        "trend": "up"
+      }
+    ]
+  }
+]
+```
 
-The endpoint can be used by an external dashboard or client portal if required.
+## CSV export
 
----
+The dashboard can export the current filtered/sorted opportunity set.
 
-## External Dashboard Compatibility
+Exported fields include:
 
-The Search Loss module can support an external dashboard.
+- Term
+- Searches
+- Revenue at Risk
+- Priority
+- Issue Type
+- Confidence
+- Suggested Action
 
-The intended architecture is:
+Revenue is exported as a raw number rather than formatted currency so it remains easier to sort, filter, and sum in spreadsheets.
 
-Magento Search Loss module  
--> Magento REST endpoint  
--> external API route  
--> external dashboard
+## Hyva compatibility
 
-This allows Search Loss data to be shown outside Magento when needed.
+The current module should be compatible with Hyva because it has no storefront frontend footprint.
 
-For Magento-only clients, the native Magento module is likely the strongest product experience.
+The module is:
 
-For multi-platform clients, or clients who want a separate portal, the external dashboard can provide a wider view across systems.
+- Magento Admin focused
+- REST API focused
+- Database-read focused
 
----
+It does not currently depend on:
 
-## Future Roadmap
+- Luma frontend templates
+- Knockout storefront components
+- RequireJS storefront behaviour
+- Magento frontend UI components
+- Checkout frontend code
+
+Current storefront footprint check should return no output:
+
+```bash
+find app/code/Scandiweb/SearchLoss \
+  -path "*view/frontend*" \
+  -o -path "*view/base*" \
+  -o -name "requirejs-config.js" \
+  -o -name "*.js" \
+  -o -name "*.less" \
+  -o -name "*.css"
+```
+
+Future weak-search tracking may require storefront tracking. If added, it should be implemented in a Hyva-compatible or theme-neutral way.
+
+## Hyva Commerce note
+
+The module should also be safe for Hyva Commerce in principle because it does not modify the storefront.
+
+The main thing to visually test later is compatibility with any Hyva Commerce admin theme styling, because the Search Loss admin page uses custom admin markup and styling.
+
+## Installation notes
+
+This module currently lives inside a Magento codebase at:
+
+```text
+app/code/Scandiweb/SearchLoss
+```
+
+Typical local development commands:
+
+```bash
+cd /home/magento/magento
+
+bin/magento module:status Scandiweb_SearchLoss
+bin/magento cache:flush
+```
+
+Syntax checks:
+
+```bash
+php -l app/code/Scandiweb/SearchLoss/Model/SearchLossDataProvider.php
+php -l app/code/Scandiweb/SearchLoss/view/adminhtml/templates/dashboard.phtml
+```
+
+Test REST endpoint:
+
+```bash
+curl -i http://localhost/rest/V1/search-loss/dashboard
+```
+
+Expected result:
+
+```text
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+## Local development caution
+
+The local Magento environment may hit ownership or permission issues after cache, compile, or static asset operations.
+
+Typical error:
+
+```text
+cache_dir "/home/magento/magento/var/cache/" is not writable
+```
+
+Local-only workaround:
+
+```bash
+sudo chmod -R 777 /home/magento/magento/var
+sudo chmod -R 777 /home/magento/magento/generated
+sudo chmod -R 777 /home/magento/magento/pub/static
+sudo chmod -R 777 /home/magento/magento/pub/media
+php bin/magento cache:flush
+```
+
+This is for local development only and is not production-safe.
+
+## Useful development commands
+
+Check module files:
+
+```bash
+find app/code/Scandiweb/SearchLoss -maxdepth 4 -type f | sort
+```
+
+Check module status:
+
+```bash
+bin/magento module:status Scandiweb_SearchLoss
+```
+
+Flush cache:
+
+```bash
+bin/magento cache:flush
+```
+
+Clear generated admin view/static files after admin UI changes:
+
+```bash
+sudo rm -rf var/view_preprocessed/* pub/static/adminhtml/*
+bin/magento cache:flush
+```
+
+Check recent Git history:
+
+```bash
+git log --oneline -5
+```
+
+Check working tree:
+
+```bash
+git status
+```
+
+## Repository separation
+
+Keep Magento module work and standalone dashboard work separate.
+
+Magento module repo:
+
+```text
+https://github.com/samuelgoodeysw/SearchLoss
+```
+
+External dashboard repo:
+
+```text
+https://github.com/samuelgoodeysw/SearchLossDashboard
+```
+
+Do not push Search Loss dashboard work to the old `SummitChassisSupply` repo.
+
+## Commercial positioning
+
+Search Loss works well as a low-friction Magento search audit or productized diagnostic.
+
+Possible offer:
+
+```text
+Fixed Search Loss Audit
+```
+
+Includes:
+
+- Module install
+- Dashboard review
+- Top failed search opportunities
+- Prioritised fix list
+- Written summary or client review session
+
+This can open the door to larger work such as:
+
+- Search/catalogue fixes
+- GA4 integration
+- Weak-search tracking
+- Hyva-safe storefront tracking
+- ERP/order/margin integration
+- Algolia, Klevu, Adobe Live Search, or Searchspring implementation
+- Broader commerce opportunity dashboards
+
+## Roadmap
 
 ### Phase 1: Failed Searches
 
-This is the current focus.
+Current phase.
 
-A failed search is when:
+A failed search is:
 
+```text
 Customer searched -> Magento returned zero results
+```
 
 This identifies:
 
-- missing catalog coverage
-- poor product/category naming
-- missing synonyms
+- Missing catalogue coverage
+- Poor product/category naming
+- Missing synonyms
 - SKU or part-number matching issues
-- search configuration problems
-- product data issues
-- category routing opportunities
-
----
+- Search configuration problems
+- Product data issues
+- Category routing opportunities
 
 ### Phase 2: Weak Searches
 
-A future phase can add Weak Searches.
+Future phase.
 
-A weak search is when:
+A weak search is:
 
+```text
 Customer searched -> results were returned -> customer did not meaningfully engage
+```
 
-Weak Searches could identify:
+This could identify:
 
-- poor result quality
-- bad ranking
-- irrelevant products shown
-- weak product data
-- low product click-through
-- low add-to-cart after search
-- low purchase conversion after search
+- Poor result quality
+- Bad ranking
+- Irrelevant products shown
+- Weak product data
+- Low product click-through
+- Low add-to-cart after search
+- Low purchase conversion after search
 
-This would likely require GA4, onsite tracking, or search platform analytics because Magento's native search query data does not reliably show product clicks, add-to-cart behavior, or purchases after search.
-
----
+This likely requires GA4, onsite tracking, or search platform analytics because Magento native `search_query` data does not reliably show product clicks, add-to-cart behaviour, or purchases after search.
 
 ### Phase 3: Search Opportunity Control Center
 
-Search Loss could later become part of a broader commerce opportunity control center.
+Search Loss could become the first section inside a broader Magento admin control center.
 
 Possible future sections:
 
 - Failed Searches
 - Weak Searches
-- Catalog Gaps
+- Catalogue Gaps
 - Product Data Health
 - Search Configuration Issues
 - Merchandising Opportunities
 - Revenue Recovery Opportunities
 
-The larger product idea is:
+## Next best improvements
 
-A Magento admin control center that shows where demand is leaking, what it may be worth, and what the merchant should fix first.
-
----
-
-## Installation Notes
-
-This module is currently under active development.
-
-Typical Magento module path:
-
-`app/code/Scandiweb/SearchLoss`
-
-After adding or changing module files, run the usual Magento setup and cache commands as needed:
-
-- `bin/magento setup:upgrade`
-- `bin/magento setup:di:compile`
-- `bin/magento cache:flush`
-
-Depending on the environment, static content deployment may also be required.
-
----
-
-## Development Notes
+### Add product visibility evidence
 
 Useful checks:
 
-- `php -l app/code/Scandiweb/SearchLoss/Model/SearchLossDataProvider.php`
-- `php -l app/code/Scandiweb/SearchLoss/view/adminhtml/templates/dashboard.phtml`
-- `git status`
-- `git log --oneline -5`
+- Product enabled/disabled
+- Visibility setting
+- Website assignment
+- Stock status
+- Category assignment
+- Searchable attribute configuration
 
-Useful Magento cache command:
+This would allow stronger diagnoses such as:
 
-- `bin/magento cache:flush`
+- Product exists but is disabled
+- Product exists but is not visible in search
+- Product exists but is not assigned to this website
+- Product exists but is out of stock
+- Product exists but search is not using the right attributes
 
-Useful endpoint test:
+### Improve catalogue evidence
 
-- `curl -i http://localhost/rest/V1/search-loss/dashboard`
+Potential additions:
 
----
+- Product descriptions
+- Short descriptions
+- Manufacturer/brand attributes
+- MPN attributes
+- Custom part number attributes
+- Product status
+- Product visibility
+- Stock status
+- Website assignment
 
-## Known Limitations
+### Add deeper order evidence
 
-Current limitations:
+Potential additions:
 
-- Recommendations are rule-based, not AI-generated.
-- Revenue at risk is directional, not guaranteed lost revenue.
-- Weak search analysis is not included yet.
-- Click-through and add-to-cart behavior are not available from native Magento search query data alone.
-- Catalog evidence currently checks product names, category names, SKU signals, and keyword matches. Deeper attribute matching can be added later.
-- Stock, margin, inventory, and ERP data are not currently included.
-- GA4 integration is not currently included.
+- Average order value by selected period
+- Related category revenue
+- Related product revenue
+- Related units sold
+- Recent demand for related products
+- Order value attached to product/category matches
 
----
+This would make Search Loss more commercially convincing.
 
-## Future Data Sources
+Example:
 
-Potential future integrations:
+```text
+Related axle/suspension products generated $8,240 in recent orders, so this failed search may represent real buying demand.
+```
 
-- GA4
-- Google Search Console
-- Shopify
-- ERP systems such as NetSuite
-- inventory data
-- margin data
-- search platform analytics
-- onsite product click tracking
+## Package readiness checklist
 
-These would make Search Loss more powerful by connecting failed or weak search demand to real behavior, product availability, margin, and conversion outcomes.
+Before sharing or packaging, review:
 
----
+- `composer.json`
+- `module.xml` version
+- README
+- ACL labels
+- Admin menu label
+- REST API ACL
+- No test tokens
+- No dev-only wording in production docs
+- No broken markdown
+- No unnecessary frontend assets
+- No production-unsafe permission instructions outside local development notes
 
-## Product Summary
+## Current summary
 
-Search Loss is a Magento-native search opportunity engine.
+Search Loss helps merchants move from:
 
-It helps merchants move from:
-
-"We have failed searches"
+```text
+We have failed searches.
+```
 
 to:
 
-"These are the missed search opportunities that matter most, here is what they may be worth, here is what Magento data suggests, and here is what to fix first."
-
-## Hyvä Compatibility
-
-The current Search Loss module is expected to be compatible with Hyvä Theme and Hyvä Commerce because it does not modify the storefront or depend on Luma frontend components. It is focused on Magento Admin, REST API output, and Magento database reads. If a site uses Hyvä Commerce Admin Theme, the Search Loss admin page should be visually tested to confirm styling and layout.
+```text
+These are the missed search opportunities that matter most, here is what they may be worth, here is what Magento data suggests, and here is what to fix first.
+```
