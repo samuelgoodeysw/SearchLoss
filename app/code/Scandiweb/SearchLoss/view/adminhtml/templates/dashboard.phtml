@@ -160,10 +160,10 @@ function tooltipLabel($label, $tooltip) {
     <div class="searchloss-hero">
         <h1>Search Loss</h1>
         <p>
-            See which failed searches are costing demand, revenue, and product discovery opportunities.
+            A failed search is a customer search that returned zero Magento results. Search Loss ranks those missed searches by demand, revenue at risk, and likely Magento fix.
         </p>
         <div class="searchloss-status">
-            Prioritized by demand, revenue at risk, and likely Magento fix.
+            Turn zero-result searches into prioritized Magento fixes.
         </div>
     </div>
 
@@ -236,7 +236,7 @@ function tooltipLabel($label, $tooltip) {
             <div class="searchloss-section-head">
                 <div class="searchloss-section-copy">
                     <h2>Ranked search opportunities</h2>
-                    <p>Highest-priority failed searches based on demand, estimated revenue at risk, likely issue type, and confidence.</p>
+                    <p>Highest-priority failed searches ranked by demand, estimated revenue at risk, likely issue type, and confidence.</p>
                 </div>
 
                 <div class="searchloss-periods">
@@ -318,6 +318,7 @@ function tooltipLabel($label, $tooltip) {
                                 $fixType = $term['fixType'] ?? 'Needs manual review';
                                 $confidence = $term['confidence'] ?? 'Review';
                                 $suggestedFix = $term['suggestedFix'] ?? 'Review this search term against products, categories, synonyms, redirects, and catalog coverage.';
+                                $shortSuggestedAction = $term['shortSuggestedAction'] ?? $suggestedFix;
                                 $plainEnglishMeaning = $term['plainEnglishMeaning'] ?? 'This term shows customer demand, but the likely cause needs manual review.';
                                 $magentoFixSteps = $term['magentoFixSteps'] ?? [];
                                 $catalogEvidence = $term['catalogEvidence'] ?? [];
@@ -345,7 +346,7 @@ function tooltipLabel($label, $tooltip) {
                                 <td><span class="searchloss-pill" style="<?= priorityStyle($priority) ?>"><?= $block->escapeHtml($priority) ?></span></td>
                                 <td><?= $block->escapeHtml($fixType) ?></td>
                                 <td><?= $block->escapeHtml($confidence) ?></td>
-                                <td class="searchloss-action"><?= $block->escapeHtml($suggestedFix) ?></td>
+                                <td class="searchloss-action"><?= $block->escapeHtml($shortSuggestedAction) ?></td>
                                 <td>
                                     <button
                                         type="button"
@@ -384,6 +385,10 @@ function tooltipLabel($label, $tooltip) {
 
                                         <div class="searchloss-detail-card">
                                             <div class="searchloss-detail-title">Recommended fix</div>
+                                            <p class="searchloss-detail-text" style="margin-bottom:10px;">
+                                                <?= $block->escapeHtml($suggestedFix) ?>
+                                            </p>
+
                                             <?php if (empty($magentoFixSteps)): ?>
                                                 <p class="searchloss-detail-text">Review this term manually against products, categories, synonyms, redirects, and searchable attributes.</p>
                                             <?php else: ?>
