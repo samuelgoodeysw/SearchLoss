@@ -87,20 +87,32 @@ class SearchLossDataProvider
     {
         $normalized = strtolower(trim($term));
 
+        if (preg_match('/hendrickson|dexter|al-ko|lippert|bpw|meritor|febi|saf/i', $normalized)) {
+            return 'Brand/product tagging';
+        }
+
+        if (preg_match('/air\s*bag|airbag|air\s*spring|air\s*suspension/i', $normalized)) {
+            return 'Synonym mapping';
+        }
+
+        if (preg_match('/nano\s+lea\.?f|lea\.f|sprng|suspention|bushng|galvani[sz]ed/i', $normalized)) {
+            return 'Spelling or formatting variant';
+        }
+
         if (preg_match('/[a-z]*\d+[a-z\d\-\.]*/i', $term)) {
             return 'Part number mapping';
         }
 
-        if (preg_match('/\b(axle|spring|suspension|brake|hub|bushing|bolt|nut|seal|kit)\b/i', $normalized)) {
+        if (preg_match('/\b(axle|spring|suspension|brake|hub|bushing|bolt|nut|seal|kit|shackle|equalizer)\b/i', $normalized)) {
             return 'Product/category coverage';
-        }
-
-        if (preg_match('/[\.]{1,}|[^\w\s\-]/', $term)) {
-            return 'Spelling or formatting variant';
         }
 
         if (str_word_count($normalized) >= 3) {
             return 'Long-tail search intent';
+        }
+
+        if (str_word_count($normalized) <= 1) {
+            return 'Ambiguous search intent';
         }
 
         return 'Search relevance';
@@ -108,21 +120,56 @@ class SearchLossDataProvider
 
     private function getSuggestedFix(string $term, string $fixType): string
     {
+        $cleanTerm = trim($term);
+
         switch ($fixType) {
+            case 'Brand/product tagging':
+                return sprintf(
+                    'Check whether products matching "%s" exist. If they do, tag matching products with the brand and phrase, then add a search synonym or redirect.',
+                    $cleanTerm
+                );
+
+            case 'Synonym mapping':
+                return sprintf(
+                    'Add "%s" as a synonym for the closest existing product language, such as air spring, air suspension, or related suspension products.',
+                    $cleanTerm
+                );
+
             case 'Part number mapping':
-                return 'Map this part number, brand term, or SKU-like query to matching products. Add redirects or product tags if needed.';
+                return sprintf(
+                    'Map "%s" as a part number, SKU-like query, or fitment phrase. Add redirects or product tags so exact-match buyers land on the right products.',
+                    $cleanTerm
+                );
 
             case 'Product/category coverage':
-                return 'Check whether this product/category exists. If it does, improve tags, synonyms, and search redirects. If not, consider adding catalogue coverage.';
+                return sprintf(
+                    'Check whether "%s" maps to an existing product or category. If it does, improve product tags and synonyms. If not, consider adding catalogue coverage or a targeted landing page.',
+                    $cleanTerm
+                );
 
             case 'Spelling or formatting variant':
-                return 'Add spelling, punctuation, or formatting variants as synonyms so customers still reach the right products.';
+                return sprintf(
+                    'Add "%s" as a spelling, punctuation, or formatting variant so customers still reach the intended products.',
+                    $cleanTerm
+                );
 
             case 'Long-tail search intent':
-                return 'Create or improve a targeted landing page, category page, or search redirect for this specific buying intent.';
+                return sprintf(
+                    'Create or improve a targeted landing page, category page, or search redirect for the specific buying intent behind "%s".',
+                    $cleanTerm
+                );
+
+            case 'Ambiguous search intent':
+                return sprintf(
+                    '"%s" is broad. Review the search results manually and consider a guided result page, redirect, or stronger category suggestions.',
+                    $cleanTerm
+                );
 
             default:
-                return 'Review product matching, synonyms, redirects, and catalogue coverage for this search term.';
+                return sprintf(
+                    'Review product matching, synonyms, redirects, and catalogue coverage for "%s".',
+                    $cleanTerm
+                );
         }
     }
 
@@ -149,7 +196,7 @@ class SearchLossDataProvider
             return 'Medium';
         }
 
-        if ($fixType === 'Part number mapping') {
+        if (in_array($fixType, ['Part number mapping', 'Brand/product tagging', 'Synonym mapping'], true)) {
             return 'Medium';
         }
 
