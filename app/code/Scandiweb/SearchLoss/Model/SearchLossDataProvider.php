@@ -26,6 +26,31 @@ class SearchLossDataProvider
         return $select;
     }
 
+    private function getTotalSearches(string $period = 'all'): int
+    {
+        $connection = $this->resource->getConnection();
+
+        $select = $connection->select()
+            ->from('search_query', ['total' => 'SUM(popularity)']);
+
+        $this->applyDateFilter($select, $period);
+
+        return (int)$connection->fetchOne($select);
+    }
+
+    private function getFailedSearchCount(string $period = 'all'): int
+    {
+        $connection = $this->resource->getConnection();
+
+        $select = $connection->select()
+            ->from('search_query', ['total' => 'SUM(popularity)'])
+            ->where('num_results = 0');
+
+        $this->applyDateFilter($select, $period);
+
+        return (int)$connection->fetchOne($select);
+    }
+
     public function getAverageOrderValue(): float
     {
         $connection = $this->resource->getConnection();
@@ -43,12 +68,7 @@ class SearchLossDataProvider
     {
         $connection = $this->resource->getConnection();
 
-        $select = $connection->select()
-            ->from('search_query', ['total' => 'SUM(popularity)']);
-
-        $this->applyDateFilter($select, $period);
-
-        $searches = (float)$connection->fetchOne($select);
+        $searches = $this->getTotalSearches($period);
 
         $orders = (float)$connection->fetchOne(
             $connection->select()
@@ -61,6 +81,79 @@ class SearchLossDataProvider
         }
 
         return $orders / $searches;
+    }
+
+    private function getFixType(string $term): string
+    {
+        $normalized = strtolower(trim($term));
+
+        if (preg_match('/[a-z]*\d+[a-z\d\-\.]*/i', $term)) {
+            return 'Part number mapping';
+        }
+
+        if (preg_match('/\b(axle|spring|suspension|brake|hub|bushing|bolt|nut|seal|kit)\b/i', $normalized)) {
+            return 'Product/category coverage';
+        }
+
+        if (preg_match('/[\.]{1,}|[^\w\s\-]/', $term)) {
+            return 'Spelling or formatting variant';
+        }
+
+        if (str_word_count($normalized) >= 3) {
+            return 'Long-tail search intent';
+        }
+
+        return 'Search relevance';
+    }
+
+    private function getSuggestedFix(string $term, string $fixType): string
+    {
+        switch ($fixType) {
+            case 'Part number mapping':
+                return 'Map this part number, brand term, or SKU-like query to matching products. Add redirects or product tags if needed.';
+
+            case 'Product/category coverage':
+                return 'Check whether this product/category exists. If it does, improve tags, synonyms, and search redirects. If not, consider adding catalogue coverage.';
+
+            case 'Spelling or formatting variant':
+                return 'Add spelling, punctuation, or formatting variants as synonyms so customers still reach the right products.';
+
+            case 'Long-tail search intent':
+                return 'Create or improve a targeted landing page, category page, or search redirect for this specific buying intent.';
+
+            default:
+                return 'Review product matching, synonyms, redirects, and catalogue coverage for this search term.';
+        }
+    }
+
+    private function getOpportunityScore(int $count, float $lostRevenue): string
+    {
+        if ($count >= 10 || $lostRevenue >= 300) {
+            return 'High';
+        }
+
+        if ($count >= 3 || $lostRevenue >= 100) {
+            return 'Medium';
+        }
+
+        return 'Low';
+    }
+
+    private function getConfidence(int $count, string $fixType): string
+    {
+        if ($count >= 10) {
+            return 'High';
+        }
+
+        if ($count >= 3) {
+            return 'Medium';
+        }
+
+        if ($fixType === 'Part number mapping') {
+            return 'Medium';
+        }
+
+        return 'Low';
     }
 
     public function getFailedSearchTerms(string $period = 'all'): array
@@ -198,16 +291,27 @@ class SearchLossDataProvider
         $summary = $this->getSummary($period);
         $failedTerms = $this->getFailedSearchTerms($period);
 
+        $totalSearches = $this->getTotalSearches($period);
+        $failedSearches = $this->getFailedSearchCount($period);
+        $zeroResultRate = $totalSearches > 0 ? ($failedSearches / $totalSearches) * 100 : 0;
+
         $externalTerms = [];
 
         foreach ($failedTerms as $term) {
+            $termText = (string)$term['query_text'];
+            $count = (int)$term['popularity'];
+            $lostRevenue = round((float)$term['lost_revenue'], 2);
+            $fixType = $this->getFixType($termText);
+
             $externalTerms[] = [
-                'term' => $term['query_text'],
-                'count' => (int)$term['popularity'],
+                'term' => $termText,
+                'count' => $count,
                 'conversion' => 0,
-                'lostRevenue' => round((float)$term['lost_revenue'], 2),
-                'opportunityScore' => 'High',
-                'suggestedFix' => 'Review product matching, synonyms, redirects, or missing catalogue coverage',
+                'lostRevenue' => $lostRevenue,
+                'opportunityScore' => $this->getOpportunityScore($count, $lostRevenue),
+                'fixType' => $fixType,
+                'suggestedFix' => $this->getSuggestedFix($termText, $fixType),
+                'confidence' => $this->getConfidence($count, $fixType),
                 'trend' => 'up'
             ];
         }
@@ -216,9 +320,11 @@ class SearchLossDataProvider
             [
                 'key' => 'searchData',
                 'value' => [
-                    'totalSearches' => $summary['failed_searches'],
-                    'zeroResultRate' => $summary['failed_searches'] > 0 ? 100 : 0,
+                    'totalSearches' => $totalSearches,
+                    'failedSearches' => $failedSearches,
+                    'zeroResultRate' => round($zeroResultRate, 2),
                     'searchToOrderRate' => round($summary['conversion_rate'], 2),
+                    'averageOrderValue' => round($summary['aov'], 2),
                     'modeledDemandLost' => round($summary['lost_revenue'], 2)
                 ]
             ],
