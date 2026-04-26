@@ -23,6 +23,46 @@ Search Loss is different.
 
 It is a diagnostic and opportunity layer for Magento. It shows where search may be failing, what that missed demand may be worth, what Magento catalogue evidence suggests, and what the merchant should review first.
 
+## Search Loss vs search platforms
+
+Search Loss is not intended to replace dedicated search platforms such as Algolia, Klevu, Adobe Live Search, Searchspring, or similar tools.
+
+Those platforms mainly focus on improving the actual search experience:
+
+- Relevance
+- Autocomplete
+- Typo tolerance
+- Merchandising
+- Ranking
+- Behavioural analytics
+- Search-led conversion optimisation
+
+Search Loss focuses on a different problem.
+
+It helps merchants understand where search is leaking demand and what should be reviewed first.
+
+Simple comparison:
+
+```text
+Magento native search reports
+-> Basic search term visibility
+
+Algolia / Klevu / Adobe Live Search / Searchspring
+-> Search engine, ranking, merchandising, relevance, and search analytics
+
+Search Loss
+-> Missed-demand diagnosis, revenue opportunity scoring, catalogue evidence, and Magento fix recommendations
+```
+
+This makes Search Loss useful before, during, or after a larger search improvement project.
+
+Examples:
+
+- Before a search rebuild, Search Loss can show what customers are failing to find.
+- During a search project, Search Loss can help prioritise catalogue, synonym, and search configuration fixes.
+- After implementing a search platform, Search Loss can still monitor missed demand and highlight unresolved catalogue gaps.
+
+
 ## Current module status
 
 Current admin location:
