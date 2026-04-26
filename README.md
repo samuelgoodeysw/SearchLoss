@@ -501,10 +501,4 @@ to:
 
 ## Hyvä Compatibility
 
-The current Search Loss module is Magento Admin and REST API focused.
-
-It does not currently include storefront templates, frontend layout XML, RequireJS frontend configuration, Knockout UI components, LESS/CSS frontend assets, or storefront JavaScript.
-
-For this reason, the current failed-search dashboard should be compatible with Magento stores using Hyvä.
-
-Future features that add storefront behavior tracking, product click tracking, add-to-cart tracking, or search interaction tracking will need to be implemented in a Hyvä-compatible or theme-neutral way.
+The current Search Loss module is expected to be compatible with Hyvä Theme and Hyvä Commerce because it does not modify the storefront or depend on Luma frontend components. It is focused on Magento Admin, REST API output, and Magento database reads. If a site uses Hyvä Commerce Admin Theme, the Search Loss admin page should be visually tested to confirm styling and layout.
