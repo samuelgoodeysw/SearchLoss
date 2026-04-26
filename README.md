@@ -2,15 +2,15 @@
 
 Search Loss is a Magento-native admin module that helps merchants identify where site search is leaking demand.
 
-It finds failed searches, estimates revenue at risk, checks Magento catalogue signals, and recommends practical review steps so teams can decide what to fix first.
+It finds failed searches, estimates revenue at risk, checks Magento catalogue/product/category signals, and recommends practical review steps so teams can decide what to fix first.
 
 ## What Search Loss helps answer
 
 - What are customers searching for but not finding?
 - Which failed searches happen most often?
 - Which failed searches may represent the most revenue at risk?
-- Does Magento already contain related product, SKU, or category data?
-- Is the issue likely to be missing catalogue coverage, weak product data, missing synonyms, SKU matching, or search configuration?
+- Does Magento already contain related product, SKU, category, website, or visibility evidence?
+- Is the issue likely to be missing catalogue coverage, weak product data, missing synonyms, SKU matching, website/category assignment, visibility, or search configuration?
 - Which fixes should be reviewed first?
 
 ## Product positioning
@@ -66,6 +66,7 @@ The Magento admin dashboard currently includes:
 - Commercial insight cards
 - Top opportunity summary
 - Period controls
+- Scroll-position preservation when changing period filters
 - Ranked opportunities table
 - Search/filter bar
 - Priority filter
@@ -77,6 +78,7 @@ The Magento admin dashboard currently includes:
 - Expandable diagnostic rows
 - Tooltips across KPI, table, and catalogue signal areas
 - Compact shortcuts inside the recommended fix area
+- Collapsed catalogue evidence behind a “Show evidence behind diagnosis” toggle
 
 ## KPI cards
 
@@ -127,9 +129,31 @@ Expanded rows currently contain three main areas:
 
 Plain-English explanation of what the failed search likely means.
 
+The diagnosis is now evidence-aware. It can react to product visibility, product status, website assignment, and category assignment evidence.
+
+Examples of diagnosis logic:
+
+- Related products exist but appear disabled.
+- Related products exist but may not be visible in search.
+- Related products exist but may not be assigned to a Magento website.
+- Related products exist but may not be assigned to a category.
+- Related products exist and appear visible in search, but Magento still returned zero results. This points toward indexing, searchable attributes, synonyms, or search configuration.
+
+The diagnosis area includes a short caveat:
+
+```text
+Evidence-led diagnosis. Review before making catalogue or search changes.
+```
+
 ### Catalogue Signal
 
 Magento evidence showing whether related catalogue data appears to exist.
+
+The catalogue signal section is collapsed by default to keep the expanded row focused on the answer. Merchants can open it with:
+
+```text
+Show evidence behind diagnosis
+```
 
 Current catalogue signal fields include:
 
@@ -137,6 +161,15 @@ Current catalogue signal fields include:
 - SKU matches
 - Full-phrase product matches
 - Keyword product matches
+- Related product matches
+- Enabled product matches
+- Disabled product matches
+- Visible in search
+- Not visible in search
+- Assigned to website
+- Not assigned to website
+- Assigned to category
+- Not assigned to category
 - Full-phrase category matches
 - Keyword category matches
 - Catalogue signal
@@ -146,7 +179,7 @@ This matters because a failed search can mean different things.
 
 If Magento returned zero results and no related catalogue data was found, it may indicate a true catalogue gap.
 
-If Magento returned zero results but related catalogue data was found, it may indicate weak product naming, missing synonyms, poor searchable attributes, indexing issues, or search configuration problems.
+If Magento returned zero results but related catalogue data was found, it may indicate weak product naming, missing synonyms, poor searchable attributes, indexing issues, website/category assignment issues, visibility issues, or search configuration problems.
 
 ### Recommended Fix
 
@@ -162,6 +195,14 @@ This section also includes compact shortcuts such as:
 
 These are review shortcuts only. Search Loss does not automatically change catalogue, checkout, order, customer, search, or storefront data.
 
+## Diagnostic accuracy note
+
+Search Loss diagnostics are directional, not definitive.
+
+The module uses Magento catalogue, product, category, search, and order signals to suggest likely issues to review. A diagnosis such as “product exists but is not showing” or “related products may not be visible in search” should be treated as evidence-led triage, not final proof.
+
+Use the dashboard to decide what to check first. Review the underlying Magento product data, website assignment, category assignment, visibility, searchable attributes, indexing, stock/salability, and search configuration before making catalogue or search changes.
+
 ## Current data sources
 
 The module currently uses Magento-native data:
@@ -170,6 +211,9 @@ The module currently uses Magento-native data:
 - `sales_order`
 - `catalog_product_entity`
 - `catalog_product_entity_varchar`
+- `catalog_product_entity_int`
+- `catalog_product_website`
+- `catalog_category_product`
 - `catalog_category_entity_varchar`
 - `eav_attribute`
 - `eav_entity_type`
@@ -180,6 +224,9 @@ Current usage:
 - `sales_order` helps estimate average order value and order count.
 - Product/category EAV data helps detect catalogue signal evidence.
 - SKU, product, and category matching support diagnosis and recommendations.
+- Product status and visibility support visibility-aware diagnosis.
+- Product website assignment supports website-aware diagnosis.
+- Product category assignment supports category-aware diagnosis.
 
 ## Current recommendation logic
 
@@ -256,6 +303,32 @@ Exported fields include:
 - Suggested Action
 
 Revenue is exported as a raw number rather than formatted currency so it remains easier to sort, filter, and sum in spreadsheets.
+
+## UX notes
+
+### Period controls
+
+The period controls include:
+
+- All time
+- Last 7 days
+- Last 30 days
+- Last quarter
+- Last year
+
+Changing the period reloads the page, but the dashboard stores and restores the scroll position so the user is not sent back to the top.
+
+### Catalogue evidence toggle
+
+Catalogue evidence is collapsed by default because most users need the summary first, not the raw reasoning.
+
+The default view shows:
+
+- Diagnosis
+- Recommended Fix
+- Compact shortcuts
+
+The evidence can be expanded when the user wants to inspect why Search Loss reached the diagnosis.
 
 ## Hyva compatibility
 
@@ -460,6 +533,8 @@ This identifies:
 - Search configuration problems
 - Product data issues
 - Category routing opportunities
+- Website assignment issues
+- Visibility/indexing issues
 
 ### Phase 2: Weak Searches
 
@@ -499,38 +574,32 @@ Possible future sections:
 
 ## Next best improvements
 
-### Add product visibility evidence
+### Add stock and salability evidence
 
 Useful checks:
 
-- Product enabled/disabled
-- Visibility setting
-- Website assignment
 - Stock status
-- Category assignment
-- Searchable attribute configuration
+- MSI salable quantity
+- Backorder status
+- Out-of-stock but still visible products
 
 This would allow stronger diagnoses such as:
 
-- Product exists but is disabled
-- Product exists but is not visible in search
-- Product exists but is not assigned to this website
-- Product exists but is out of stock
-- Product exists but search is not using the right attributes
+- Product exists but may be out of stock.
+- Product exists but may not be salable on the current website/source.
+- Customer demand exists for unavailable products.
 
-### Improve catalogue evidence
+### Improve searchable attribute evidence
 
 Potential additions:
 
-- Product descriptions
-- Short descriptions
-- Manufacturer/brand attributes
-- MPN attributes
-- Custom part number attributes
-- Product status
-- Product visibility
-- Stock status
-- Website assignment
+- Whether product name is searchable
+- Whether SKU is searchable
+- Whether brand/manufacturer is searchable
+- Whether custom part-number attributes are searchable
+- Whether descriptions or short descriptions are searchable
+
+This would help prove whether search is looking at the right data.
 
 ### Add deeper order evidence
 
