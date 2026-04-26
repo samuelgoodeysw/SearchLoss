@@ -23,6 +23,14 @@ class SearchLossDataProvider
             $select->where('updated_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)');
         }
 
+        if ($period === '90') {
+            $select->where('updated_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)');
+        }
+
+        if ($period === '365') {
+            $select->where('updated_at >= DATE_SUB(NOW(), INTERVAL 365 DAY)');
+        }
+
         return $select;
     }
 
