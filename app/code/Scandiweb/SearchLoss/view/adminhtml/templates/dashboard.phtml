@@ -169,16 +169,226 @@ function catalogEvidenceTooltip($label) {
     .searchloss-periods { justify-content:flex-start; }
 }
 
+
+.search-loss-action-links {
+    margin: 0 0 18px;
+    padding: 14px 16px;
+    border: 1px solid #dbe7f3;
+    border-radius: 12px;
+    background: #f8fbff;
+}
+
+.search-loss-action-links__title {
+    margin: 0 0 10px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #253858;
+}
+
+.search-loss-action-links__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.search-loss-action-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 7px 12px;
+    border: 1px solid #bdd6f3;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #1557d6;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+.search-loss-action-link:hover,
+.search-loss-action-link:focus {
+    border-color: #7eb6f6;
+    background: #eef6ff;
+    color: #0b48bf;
+    text-decoration: none;
+}
+
+.search-loss-action-links__note {
+    margin: 10px 0 0;
+    font-size: 12px;
+    color: #5f6f89;
+}
+
+
+.searchloss-action-links {
+    background: #f8fbff;
+    border: 1px solid #dbe7f3;
+    border-radius: 14px;
+    padding: 14px;
+}
+
+.searchloss-action-links .searchloss-detail-title {
+    margin-bottom: 10px;
+}
+
+.searchloss-action-links-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.searchloss-action-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 7px 12px;
+    border: 1px solid #bdd6f3;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #1557d6;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+.searchloss-action-link:hover,
+.searchloss-action-link:focus {
+    border-color: #7eb6f6;
+    background: #eef6ff;
+    color: #0b48bf;
+    text-decoration: none;
+}
+
+.searchloss-action-links-note {
+    margin: 10px 0 0;
+    font-size: 12px;
+    color: #5f6f89;
+}
+
+
+.searchloss-detail-card {
+    align-self: start;
+}
+
+.searchloss-detail-card--fix {
+    grid-column: 1 / -1;
+}
+
+.searchloss-action-links {
+    min-height: 0;
+}
+
+.searchloss-action-links-buttons {
+    align-items: center;
+}
+
+.searchloss-action-links-note {
+    margin-top: 8px;
+    line-height: 1.4;
+}
+
+@media (max-width: 1024px) {
+    .searchloss-detail-card--fix {
+        grid-column: auto;
+    }
+}
+
+
+/* Search Loss expanded-row layout polish */
+.searchloss-detail-card,
+.searchloss-action-links {
+    align-self: start;
+}
+
+.searchloss-action-links {
+    order: 4;
+    min-height: 0;
+}
+
+.searchloss-detail-card--fix {
+    order: 3;
+    grid-column: auto;
+}
+
+.searchloss-action-links-buttons {
+    align-items: center;
+}
+
+.searchloss-action-links-note {
+    margin-top: 8px;
+    line-height: 1.4;
+}
+
+@media (max-width: 1024px) {
+    .searchloss-action-links,
+    .searchloss-detail-card--fix {
+        order: initial;
+        grid-column: auto;
+    }
+}
+
+
+/* Compact Magento action links inside Recommended Fix */
+.searchloss-inline-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.searchloss-inline-actions-label {
+    font-weight: 700;
+    color: #475569;
+}
+
+.searchloss-inline-action-link {
+    color: #1557d6;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.searchloss-inline-action-link:hover,
+.searchloss-inline-action-link:focus {
+    color: #0b48bf;
+    text-decoration: underline;
+}
+
+.searchloss-inline-actions-separator {
+    color: #cbd5e1;
+}
+
+
+/* Reset expanded-row card ordering after inline Magento links */
+.searchloss-detail-card--fix {
+    grid-column: auto;
+    order: initial;
+}
+
+.searchloss-action-links {
+    display: none;
+}
+
 </style>
 
 <div class="searchloss-page">
     <div class="searchloss-hero">
-        <h1>Search Loss</h1>
+        <h1>Search Opportunity Dashboard</h1>
         <p>
-            A failed search is a customer search that returned zero Magento results. Search Loss ranks those missed searches by demand, revenue at risk, and likely Magento fix.
+            Find failed searches, estimate revenue at risk, and see what Magento should review first.
         </p>
         <div class="searchloss-status">
-            Turn zero-result searches into prioritized Magento fixes.
+            Read-only Magento diagnostic. No storefront changes made.
         </div>
     </div>
 
@@ -212,23 +422,23 @@ function catalogEvidenceTooltip($label) {
 
     <div class="searchloss-insights">
         <div class="searchloss-insight">
-            <h3>Search reveals buyer intent</h3>
+            <h3>Demand signal</h3>
             <p>
-                Customers who search are often telling you exactly what they want. Failed searches are missed buying intent.
+                Customers are telling you what they could not find. Repeated failed searches point to missed demand.
             </p>
         </div>
 
         <div class="searchloss-insight">
-            <h3>Lost demand is measurable</h3>
+            <h3>Revenue model</h3>
             <p>
-                This period shows <?= number_format((int)$summary['failed_searches']) ?> failed searches and <?= money($summary['lost_revenue']) ?> in directional revenue at risk.
+                This view shows <?= number_format((int)$summary['failed_searches']) ?> failed searches and <?= money($summary['lost_revenue']) ?> in directional revenue at risk.
             </p>
         </div>
 
         <div class="searchloss-insight">
-            <h3>Start with the biggest wins</h3>
+            <h3>Fix path</h3>
             <p>
-                Prioritise search issues with the clearest commercial upside and highest fix confidence.
+                Each opportunity points to a likely Magento catalogue, synonym, SKU, or search issue.
             </p>
         </div>
 
@@ -400,9 +610,21 @@ function catalogEvidenceTooltip($label) {
                                                 </div>
                                             <?php endif; ?>
                                         </div>
-
-                                        <div class="searchloss-detail-card">
+<div class="searchloss-detail-card">
                                             <div class="searchloss-detail-title">Recommended fix</div>
+                                            <div class="searchloss-inline-actions">
+                                                <span class="searchloss-inline-actions-label">Shortcuts:</span>
+                                                <a class="searchloss-inline-action-link" href="<?= $block->getUrl('catalog/product/index') ?>" target="_blank" rel="noopener">Products</a>
+                                                <span class="searchloss-inline-actions-separator">|</span>
+                                                <a class="searchloss-inline-action-link" href="<?= $block->getUrl('catalog/category/index') ?>" target="_blank" rel="noopener">Categories</a>
+                                                <span class="searchloss-inline-actions-separator">|</span>
+                                                <a class="searchloss-inline-action-link" href="<?= $block->getUrl('catalog/search/index') ?>" target="_blank" rel="noopener">Search terms</a>
+                                                <span class="searchloss-inline-actions-separator">|</span>
+                                                <a class="searchloss-inline-action-link" href="<?= $block->getUrl('indexer/indexer/list') ?>" target="_blank" rel="noopener">Indexes</a>
+                                                <span class="searchloss-inline-actions-separator">|</span>
+                                                <a class="searchloss-inline-action-link" href="<?= $block->getUrl('adminhtml/cache/index') ?>" target="_blank" rel="noopener">Cache</a>
+                                            </div>
+
                                             <p class="searchloss-detail-text" style="margin-bottom:10px;">
                                                 <?= $block->escapeHtml($suggestedFix) ?>
                                             </p>
