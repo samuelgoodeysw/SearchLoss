@@ -1,112 +1,151 @@
 <?php
 $summary = $block->getSummary();
 $currentPeriod = $block->getCurrentPeriod();
+$rankedTerms = $block->getRankedFailedSearchTerms();
 
 function activeStyle($current, $period) {
     return $current === $period
         ? 'background:#eb5202;color:#fff;border-color:#eb5202;'
-        : 'background:#fff;color:#333;';
+        : 'background:#fff;color:#1f2937;border-color:#d1d5db;';
+}
+
+function priorityStyle($priority) {
+    $priority = strtolower((string)$priority);
+
+    if ($priority === 'high') {
+        return 'background:#fee2e2;color:#991b1b;border-color:#fecaca;';
+    }
+
+    if ($priority === 'medium') {
+        return 'background:#fef3c7;color:#92400e;border-color:#fde68a;';
+    }
+
+    return 'background:#f1f5f9;color:#334155;border-color:#cbd5e1;';
+}
+
+function money($value) {
+    return '$' . number_format((float)$value, 0);
 }
 ?>
 
-<h2>Search Loss Overview</h2>
+<style>
+.searchloss-page { color:#1f2937; }
+.searchloss-hero { background:linear-gradient(135deg,#0f172a,#1e293b 55%,#0f766e 140%); border-radius:18px; color:#fff; padding:22px; margin-bottom:18px; box-shadow:0 12px 28px rgba(15,23,42,.18); }
+.searchloss-hero h1 { margin:0 0 8px; color:#fff; font-size:24px; font-weight:700; }
+.searchloss-hero p { margin:0; max-width:820px; color:#cbd5e1; line-height:1.6; }
+.searchloss-status { display:inline-flex; margin-top:16px; padding:8px 11px; border:1px solid rgba(125,211,252,.28); background:rgba(14,165,233,.12); border-radius:999px; color:#dbeafe; font-size:12px; font-weight:700; }
+.searchloss-periods { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+.searchloss-periods a { display:inline-block; padding:8px 12px; border:1px solid #d1d5db; border-radius:999px; text-decoration:none; font-size:13px; font-weight:700; }
+.searchloss-grid { display:grid; grid-template-columns:repeat(5,minmax(150px,1fr)); gap:12px; margin-bottom:18px; }
+.searchloss-card { background:#fff; border:1px solid #d7dce2; border-radius:16px; padding:16px; box-shadow:0 8px 20px rgba(15,23,42,.06); }
+.searchloss-label { color:#64748b; font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+.searchloss-value { margin-top:8px; color:#0f172a; font-size:25px; font-weight:800; }
+.searchloss-help { margin-top:6px; color:#64748b; font-size:12px; line-height:1.45; }
+.searchloss-section { background:#fff; border:1px solid #d7dce2; border-radius:18px; margin-bottom:18px; overflow:hidden; box-shadow:0 8px 20px rgba(15,23,42,.06); }
+.searchloss-section-header { padding:16px 18px; border-bottom:1px solid #e5e7eb; background:#f8fafc; }
+.searchloss-section-header h2 { margin:0; color:#0f172a; font-size:18px; font-weight:700; }
+.searchloss-section-header p { margin:6px 0 0; color:#64748b; font-size:13px; line-height:1.5; }
+.searchloss-table-wrap { overflow-x:auto; }
+.searchloss-table { width:100%; border-collapse:collapse; background:#fff; }
+.searchloss-table th { padding:12px 14px; background:#f8fafc; color:#64748b; border-bottom:1px solid #e5e7eb; font-size:11px; font-weight:800; letter-spacing:.06em; text-align:left; text-transform:uppercase; white-space:nowrap; }
+.searchloss-table td { padding:13px 14px; border-bottom:1px solid #edf2f7; color:#334155; font-size:13px; line-height:1.45; vertical-align:top; }
+.searchloss-table tr:hover td { background:#f8fafc; }
+.searchloss-term { color:#0f172a; font-weight:700; }
+.searchloss-money { color:#0f172a; font-weight:800; white-space:nowrap; }
+.searchloss-pill { display:inline-flex; align-items:center; border:1px solid #cbd5e1; border-radius:999px; padding:3px 8px; font-size:11px; font-weight:800; white-space:nowrap; }
+.searchloss-action { min-width:340px; color:#475569; }
+.searchloss-empty { padding:22px; color:#64748b; font-size:13px; }
+@media (max-width:1200px) { .searchloss-grid { grid-template-columns:repeat(2,minmax(160px,1fr)); } }
+</style>
 
-<div style="margin-bottom:20px;">
-    <a href="?period=all" style="padding:8px 12px;border:1px solid #ccc;text-decoration:none;<?= activeStyle($currentPeriod, 'all') ?>">All time</a>
-    <a href="?period=7" style="padding:8px 12px;border:1px solid #ccc;text-decoration:none;<?= activeStyle($currentPeriod, '7') ?>">Last 7 days</a>
-    <a href="?period=30" style="padding:8px 12px;border:1px solid #ccc;text-decoration:none;<?= activeStyle($currentPeriod, '30') ?>">Last 30 days</a>
+<div class="searchloss-page">
+    <div class="searchloss-hero">
+        <h1>Search Loss</h1>
+        <p>
+            Customers are telling you what they want. This dashboard shows where Magento search may not be connecting that demand to useful products, categories, synonyms, or search results.
+        </p>
+        <div class="searchloss-status">
+            Read-only Magento admin insight. No storefront, checkout, catalogue, customer, or order data is modified.
+        </div>
+    </div>
+
+    <div class="searchloss-periods">
+        <a href="?period=all" style="<?= activeStyle($currentPeriod, 'all') ?>">All time</a>
+        <a href="?period=7" style="<?= activeStyle($currentPeriod, '7') ?>">Last 7 days</a>
+        <a href="?period=30" style="<?= activeStyle($currentPeriod, '30') ?>">Last 30 days</a>
+    </div>
+
+    <div class="searchloss-grid">
+        <div class="searchloss-card">
+            <div class="searchloss-label">Failed Terms</div>
+            <div class="searchloss-value"><?= (int)$summary['failed_terms'] ?></div>
+            <div class="searchloss-help">Unique failed search terms.</div>
+        </div>
+        <div class="searchloss-card">
+            <div class="searchloss-label">Failed Searches</div>
+            <div class="searchloss-value"><?= number_format((int)$summary['failed_searches']) ?></div>
+            <div class="searchloss-help">Total zero-result searches.</div>
+        </div>
+        <div class="searchloss-card">
+            <div class="searchloss-label">Revenue at Risk</div>
+            <div class="searchloss-value"><?= money($summary['lost_revenue']) ?></div>
+            <div class="searchloss-help">Directional estimate, not guaranteed lost revenue.</div>
+        </div>
+        <div class="searchloss-card">
+            <div class="searchloss-label">AOV</div>
+            <div class="searchloss-value"><?= money($summary['aov']) ?></div>
+            <div class="searchloss-help">Average order value from Magento orders.</div>
+        </div>
+        <div class="searchloss-card">
+            <div class="searchloss-label">Search-to-order rate</div>
+            <div class="searchloss-value"><?= number_format((float)$summary['conversion_rate'], 1) ?>%</div>
+            <div class="searchloss-help">Used to model missed demand value.</div>
+        </div>
+    </div>
+
+    <div class="searchloss-section">
+        <div class="searchloss-section-header">
+            <h2>Ranked search opportunities</h2>
+            <p>Highest-priority failed searches based on demand, estimated revenue at risk, likely issue type, and confidence.</p>
+        </div>
+
+        <?php if (empty($rankedTerms)): ?>
+            <div class="searchloss-empty">No failed search terms were found for the selected period.</div>
+        <?php else: ?>
+            <div class="searchloss-table-wrap">
+                <table class="searchloss-table">
+                    <thead>
+                        <tr>
+                            <th>Term</th>
+                            <th>Searches</th>
+                            <th>Revenue at Risk</th>
+                            <th>Priority</th>
+                            <th>Issue Type</th>
+                            <th>Confidence</th>
+                            <th>Suggested Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($rankedTerms as $term): ?>
+                            <?php
+                                $priority = $term['opportunityScore'] ?? 'Review';
+                                $fixType = $term['fixType'] ?? 'Needs manual review';
+                                $confidence = $term['confidence'] ?? 'Review';
+                                $suggestedFix = $term['suggestedFix'] ?? 'Review this search term against products, categories, synonyms, redirects, and catalogue coverage.';
+                            ?>
+                            <tr>
+                                <td><span class="searchloss-term"><?= $block->escapeHtml($term['term'] ?? '') ?></span></td>
+                                <td><?= number_format((int)($term['count'] ?? 0)) ?></td>
+                                <td class="searchloss-money"><?= money($term['lostRevenue'] ?? 0) ?></td>
+                                <td><span class="searchloss-pill" style="<?= priorityStyle($priority) ?>"><?= $block->escapeHtml($priority) ?></span></td>
+                                <td><?= $block->escapeHtml($fixType) ?></td>
+                                <td><?= $block->escapeHtml($confidence) ?></td>
+                                <td class="searchloss-action"><?= $block->escapeHtml($suggestedFix) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
 </div>
-
-<div style="display:flex; gap:16px; margin-bottom:24px; flex-wrap:wrap;">
-    <div style="padding:16px; background:#fff; border:1px solid #ddd;"><strong>Failed Terms</strong><br><?= (int)$summary['failed_terms'] ?></div>
-    <div style="padding:16px; background:#fff; border:1px solid #ddd;"><strong>Failed Searches</strong><br><?= (int)$summary['failed_searches'] ?></div>
-    <div style="padding:16px; background:#fff; border:1px solid #ddd;"><strong>Est. Lost Revenue</strong><br>$<?= number_format($summary['lost_revenue'], 2) ?></div>
-    <div style="padding:16px; background:#fff; border:1px solid #ddd;"><strong>AOV</strong><br>$<?= number_format($summary['aov'], 2) ?></div>
-    <div style="padding:16px; background:#fff; border:1px solid #ddd;"><strong>Conversion Rate</strong><br><?= number_format($summary['conversion_rate'], 2) ?>%</div>
-</div>
-
-<h2>🚨 Failed Search Terms (Zero Results)</h2>
-
-<table border="1" cellpadding="5">
-    <tr>
-        <th>Search Term</th>
-        <th>Search Count</th>
-        <th>Updated</th>
-        <th>Lost Revenue</th>
-    </tr>
-
-    <?php foreach ($block->getFailedSearchTerms() as $t): ?>
-        <tr style="background:#ffe6e6;">
-            <td><?= $block->escapeHtml($t['query_text']) ?></td>
-            <td><?= (int)$t['popularity'] ?></td>
-            <td><?= $block->escapeHtml($t['updated_at']) ?></td>
-            <td>$<?= number_format((float)$t['lost_revenue'], 2) ?></td>
-        </tr>
-    <?php endforeach; ?>
-</table>
-
-<br><br>
-
-<h2>⚠️ Weak Search Terms</h2>
-
-<table border="1" cellpadding="5">
-    <tr>
-        <th>Search Term</th>
-        <th>Results</th>
-        <th>Search Count</th>
-        <th>Updated</th>
-        <th>Opportunity Score</th>
-        <th>Result Density</th>
-    </tr>
-
-    <?php foreach ($block->getWeakSearchTerms() as $t): ?>
-        <tr style="background:#fff3cd;">
-            <td><?= $block->escapeHtml($t['query_text']) ?></td>
-            <td><?= (int)$t['num_results'] ?></td>
-            <td><?= (int)$t['popularity'] ?></td>
-            <td><?= $block->escapeHtml($t['updated_at']) ?></td>
-            <td><?= $t['opportunity_score'] ?></td>
-            <td><?= $t['result_density'] ?></td>
-        </tr>
-    <?php endforeach; ?>
-</table>
-
-<br><br>
-
-<h2>💡 Opportunity Insights</h2>
-
-<table border="1" cellpadding="5">
-    <tr>
-        <th>Search Term</th>
-        <th>Searches</th>
-        <th>Purchases</th>
-        <th>Purchase Rate</th>
-        <th>Missed Purchases</th>
-        <th>Est. Missed Revenue</th>
-        <th>Issue</th>
-    </tr>
-
-    <?php foreach ($block->getOpportunityInsights() as $row): ?>
-        <?php
-            $bg = '#e6ffed'; // green default
-
-            if ($row['issue'] === 'Low Conversion') {
-                $bg = '#e6f0ff'; // blue
-            } elseif ($row['issue'] === 'Weak Results') {
-                $bg = '#fff3cd'; // yellow
-            } elseif ($row['issue'] === 'Zero Results') {
-                $bg = '#ffe6e6'; // red
-            }
-        ?>
-        <tr style="background:<?= $bg ?>;">
-            <td><?= $block->escapeHtml($row['search_term']) ?></td>
-            <td><?= (int)$row['searches'] ?></td>
-            <td><?= (int)$row['purchases'] ?></td>
-            <td><?= number_format($row['purchase_rate'], 2) ?>%</td>
-            <td><?= (int)$row['missed_purchases'] ?></td>
-            <td>$<?= number_format($row['estimated_missed_revenue'], 2) ?></td>
-            <td><?= $row['issue'] ?></td>
-        </tr>
-    <?php endforeach; ?>
-</table>
-
