@@ -236,7 +236,7 @@ class SearchLossDataProvider
 
             case 'Product or category may be missing':
                 return sprintf(
-                    'Check whether the store sells "%s", an equivalent product, or a close substitute. If it exists, improve findability. If not, treat repeated searches as catalogue demand or route customers to the closest helpful alternative.',
+                    'Check whether the store sells "%s", an equivalent product, or a close substitute. If it exists, improve findability. If not, treat repeated searches as catalog demand or route customers to the closest helpful alternative.',
                     $cleanTerm
                 );
 
@@ -266,7 +266,7 @@ class SearchLossDataProvider
 
             default:
                 return sprintf(
-                    'Check whether "%s" maps to a product, category, SKU, brand, synonym, redirect, compatibility need, or catalogue gap. If it repeats or has high revenue at risk, assign it to a clearer fix type after review.',
+                    'Check whether "%s" maps to a product, category, SKU, brand, synonym, redirect, compatibility need, or catalog gap. If it repeats or has high revenue at risk, assign it to a clearer fix type after review.',
                     $cleanTerm
                 );
         }
@@ -291,7 +291,7 @@ class SearchLossDataProvider
 
             case 'Customers use different wording':
                 return sprintf(
-                    'Customers may be using "%s" to describe something the catalogue calls by a different name.',
+                    'Customers may be using "%s" to describe something the catalog calls by a different name.',
                     $cleanTerm
                 );
 
@@ -357,7 +357,7 @@ class SearchLossDataProvider
             case 'Customers use different wording':
                 return [
                     'Check whether the term maps to an existing product or category.',
-                    'Identify the catalogue wording currently used for the same product.',
+                    'Identify the catalog wording currently used for the same product.',
                     'Add safe synonyms or searchable terms where the meaning is the same.',
                     'Update product or category copy only where the wording is accurate.',
                     'Reindex Magento search data and test the search again.',
@@ -369,7 +369,7 @@ class SearchLossDataProvider
                     'Review whether those identifiers are stored on the correct product.',
                     'Make sure SKU and part-number fields are searchable where appropriate.',
                     'Add alternate identifiers to product data if they are valid.',
-                    'Reindex Magento search data and test exact-match search behaviour.',
+                    'Reindex Magento search data and test exact-match search behavior.',
                 ];
 
             case 'Product or category may be missing':
@@ -377,7 +377,7 @@ class SearchLossDataProvider
                     'Check whether the store already sells this product, an equivalent product, or a close substitute.',
                     'If products exist, improve product naming, searchable attributes, category assignment, and discoverability.',
                     'If a category exists, consider routing customers to the best category or landing page.',
-                    'If the store does not sell it, treat repeated searches as catalogue demand.',
+                    'If the store does not sell it, treat repeated searches as catalog demand.',
                     'Reindex Magento search data and test the search again.',
                 ];
 
@@ -421,7 +421,7 @@ class SearchLossDataProvider
                 return [
                     'Search the term manually in Magento and on the storefront.',
                     'Review matching products, categories, synonyms, redirects, and searchable attributes.',
-                    'Check whether this is a catalogue gap or a findability issue.',
+                    'Check whether this is a catalog gap or a findability issue.',
                     'Assign a clearer fix type after review.',
                     'Reindex Magento search data and test again.',
                 ];

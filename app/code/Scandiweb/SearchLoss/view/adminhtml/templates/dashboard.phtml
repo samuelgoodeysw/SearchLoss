@@ -186,7 +186,7 @@ function tooltipLabel($label, $tooltip) {
         <div class="searchloss-card">
             <div class="searchloss-label"><?= tooltipLabel('Search-to-order rate', 'Estimated relationship between search volume and orders. Used to model missed demand value.') ?></div>
             <div class="searchloss-value"><?= number_format((float)$summary['conversion_rate'], 1) ?>%</div>
-            <div class="searchloss-help">Used for revenue modelling.</div>
+            <div class="searchloss-help">Used for revenue modeling.</div>
         </div>
     </div>
 
@@ -300,7 +300,7 @@ function tooltipLabel($label, $tooltip) {
                             <th><button type="button" class="searchloss-sort-button" data-sort-key="searches"><?= tooltipLabel('Searches', 'How many times customers searched this term in the selected period.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
                             <th><button type="button" class="searchloss-sort-button" data-sort-key="revenue"><?= tooltipLabel('Revenue at Risk', 'Searches multiplied by average order value and search-to-order rate. Directional estimate only.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
                             <th><button type="button" class="searchloss-sort-button" data-sort-key="priority"><?= tooltipLabel('Priority', 'High priority terms should usually be reviewed first.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
-                            <th><button type="button" class="searchloss-sort-button" data-sort-key="issue"><?= tooltipLabel('Issue Type', 'The likely Magento search, catalogue, product data, synonym, SKU, or category issue.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
+                            <th><button type="button" class="searchloss-sort-button" data-sort-key="issue"><?= tooltipLabel('Issue Type', 'The likely Magento search, catalog, product data, synonym, SKU, or category issue.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
                             <th><button type="button" class="searchloss-sort-button" data-sort-key="confidence"><?= tooltipLabel('Confidence', 'How strongly the data suggests this issue type. Higher confidence usually means clearer next action.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
                             <th><?= tooltipLabel('Suggested Action', 'Recommended next review or fix based on the likely issue type.') ?></th>
                             <th><?= tooltipLabel('Details', 'Open the diagnostic row for plain-English explanation and Magento checks or fixes.') ?></th>
@@ -312,7 +312,7 @@ function tooltipLabel($label, $tooltip) {
                                 $priority = $term['opportunityScore'] ?? 'Review';
                                 $fixType = $term['fixType'] ?? 'Needs manual review';
                                 $confidence = $term['confidence'] ?? 'Review';
-                                $suggestedFix = $term['suggestedFix'] ?? 'Review this search term against products, categories, synonyms, redirects, and catalogue coverage.';
+                                $suggestedFix = $term['suggestedFix'] ?? 'Review this search term against products, categories, synonyms, redirects, and catalog coverage.';
                                 $plainEnglishMeaning = $term['plainEnglishMeaning'] ?? 'This term shows customer demand, but the likely cause needs manual review.';
                                 $magentoFixSteps = $term['magentoFixSteps'] ?? [];
                                 $detailId = 'searchloss-detail-' . md5(($term['term'] ?? '') . '-' . ($term['count'] ?? '0'));
