@@ -470,6 +470,7 @@ class SearchLossDataProvider
 
     private function getSuggestedFix(string $term, string $fixType): string
     {
+
         $cleanTerm = trim($term);
 
         switch ($fixType) {
@@ -566,7 +567,37 @@ class SearchLossDataProvider
 
     private function getPlainEnglishMeaning(string $term, string $fixType): string
     {
+
         $cleanTerm = trim($term);
+        $visibilitySignals = $this->getProductVisibilitySignals($term, $this->getSearchTokens($term));
+
+        if ((int)$visibilitySignals['relatedProductsChecked'] > 0) {
+            if ((int)$visibilitySignals['disabledProducts'] > 0 && (int)$visibilitySignals['enabledProducts'] <= 0) {
+                return sprintf(
+                    'Related products were found for "%s", but they appear to be disabled in Magento. Customers may be searching for products that exist in the catalogue but are not currently sellable or visible.',
+                    $cleanTerm
+                );
+            }
+
+            if ((int)$visibilitySignals['notVisibleInSearch'] > 0 && (int)$visibilitySignals['visibleInSearch'] <= 0) {
+                return sprintf(
+                    'Related products were found for "%s", but they do not appear to be visible in search. Magento may have the product data, but customers may not be able to reach it through site search.',
+                    $cleanTerm
+                );
+            }
+
+            if ((int)$visibilitySignals['visibleInSearch'] > 0) {
+                return sprintf(
+                    'Related products for "%s" appear to exist and be visible in search, but Magento still returned zero results. This points toward indexing, searchable attributes, synonyms, or search configuration rather than a simple catalogue gap.',
+                    $cleanTerm
+                );
+            }
+
+            return sprintf(
+                'Related products were found for "%s", but Magento still returned zero results. Review product visibility, searchable attributes, synonyms, indexing, and customer wording before treating this as missing catalogue demand.',
+                $cleanTerm
+            );
+        }
 
         switch ($fixType) {
             case 'Product exists but is not showing':
