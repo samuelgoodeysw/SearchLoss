@@ -43,6 +43,21 @@ function tooltipLabel($label, $tooltip) {
         . '</span>'
         . '</span>';
 }
+
+function catalogEvidenceTooltip($label) {
+    $tooltips = [
+        'Search words checked' => 'The key words taken from the customer search and checked against Magento product and category data.',
+        'SKU matches' => 'Products with a SKU that matches the customer search. If this is above zero, search may not be finding SKU data correctly.',
+        'Full-phrase product matches' => 'Products whose name contains the full search phrase. If this is above zero but search failed, Magento may not be searching the right product data.',
+        'Keyword product matches' => 'Products whose name contains one or more key words from the search. This can show related products even when the exact phrase does not exist.',
+        'Full-phrase category matches' => 'Categories whose name contains the full search phrase. If this is above zero, the search may need to route customers to that category.',
+        'Keyword category matches' => 'Categories whose name contains one or more key words from the search. This can show a related category path for the failed search.',
+        'Catalog signal' => 'A quick summary of whether Magento appears to have matching or related catalog data for this failed search.',
+        'What this suggests' => 'What the catalog evidence likely means: missing catalog coverage, weak product data, missing synonyms, or search not connecting customer wording to Magento data.',
+    ];
+
+    return $tooltips[$label] ?? 'Extra Magento catalog context for this failed search.';
+}
 ?>
 
 <style>
@@ -143,7 +158,7 @@ function tooltipLabel($label, $tooltip) {
 .searchloss-evidence-list { display:grid; gap:8px; margin:0; }
 .searchloss-evidence-item { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid #e5e7eb; }
 .searchloss-evidence-item:last-child { border-bottom:0; }
-.searchloss-evidence-label { color:#64748b; font-size:12px; font-weight:800; }
+.searchloss-evidence-label { color:#64748b; font-size:12px; font-weight:800; display:inline-flex; align-items:center; }
 .searchloss-evidence-value { color:#0f172a; font-size:12px; font-weight:800; text-align:right; overflow-wrap:anywhere; max-width:62%; line-height:1.45; }
 @media (max-width:1400px) { .searchloss-insights { grid-template-columns:repeat(2,minmax(220px,1fr)); } }
 @media (max-width:768px) { .searchloss-insights { grid-template-columns:1fr; } }
@@ -375,7 +390,10 @@ function tooltipLabel($label, $tooltip) {
                                                 <div class="searchloss-evidence-list">
                                                     <?php foreach ($catalogEvidence as $item): ?>
                                                         <div class="searchloss-evidence-item">
-                                                            <span class="searchloss-evidence-label"><?= $block->escapeHtml($item['label'] ?? '') ?></span>
+                                                            <?php $evidenceLabel = (string)($item['label'] ?? ''); ?>
+                                                            <span class="searchloss-evidence-label">
+                                                                <?= tooltipLabel($evidenceLabel, catalogEvidenceTooltip($evidenceLabel)) ?>
+                                                            </span>
                                                             <span class="searchloss-evidence-value"><?= $block->escapeHtml($item['value'] ?? '') ?></span>
                                                         </div>
                                                     <?php endforeach; ?>
