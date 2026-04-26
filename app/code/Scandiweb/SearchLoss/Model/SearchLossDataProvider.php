@@ -88,34 +88,34 @@ class SearchLossDataProvider
         $normalized = strtolower(trim($term));
 
         if (preg_match('/hendrickson|dexter|al-ko|lippert|bpw|meritor|febi|saf/i', $normalized)) {
-            return 'Brand/product tagging';
+            return 'Brand or product terms are missing';
         }
 
         if (preg_match('/air\s*bag|airbag|air\s*spring|air\s*suspension/i', $normalized)) {
-            return 'Synonym mapping';
+            return 'Customers use different wording';
         }
 
         if (preg_match('/nano\s+lea\.?f|lea\.f|sprng|suspention|bushng|galvani[sz]ed/i', $normalized)) {
-            return 'Spelling or formatting variant';
+            return 'Spelling or format variant';
         }
 
         if (preg_match('/[a-z]*\d+[a-z\d\-\.]*/i', $term)) {
-            return 'Part number mapping';
+            return 'SKU or part number is not matching';
         }
 
         if (preg_match('/\b(axle|spring|suspension|brake|hub|bushing|bolt|nut|seal|kit|shackle|equalizer)\b/i', $normalized)) {
-            return 'Product/category coverage';
+            return 'Product or category may be missing';
         }
 
         if (str_word_count($normalized) >= 3) {
-            return 'Long-tail search intent';
+            return 'Fitment or use case is unclear';
         }
 
         if (str_word_count($normalized) <= 1) {
-            return 'Ambiguous search intent';
+            return 'Search term is too broad or unclear';
         }
 
-        return 'Search relevance';
+        return 'Results are weak or badly ranked';
     }
 
     private function getSuggestedFix(string $term, string $fixType): string
@@ -123,53 +123,155 @@ class SearchLossDataProvider
         $cleanTerm = trim($term);
 
         switch ($fixType) {
-            case 'Brand/product tagging':
+            case 'Brand or product terms are missing':
                 return sprintf(
-                    'Check whether products matching "%s" exist. If they do, tag matching products with the brand and phrase, then add a search synonym or redirect.',
+                    'Check whether matching products have the right brand, manufacturer, product family, model, and product-type data for "%s". If products exist, add the missing terms to searchable attributes and improve product naming or copy where useful.',
                     $cleanTerm
                 );
 
-            case 'Synonym mapping':
+            case 'Customers use different wording':
                 return sprintf(
-                    'Add "%s" as a synonym for the closest existing product language, such as air spring, air suspension, or related suspension products.',
+                    'Check whether "%s" means the same thing as an existing product or category. If it does, add it as a synonym or searchable term, and update product/category copy only where the wording is accurate and natural.',
                     $cleanTerm
                 );
 
-            case 'Part number mapping':
+            case 'SKU or part number is not matching':
                 return sprintf(
-                    'Map "%s" as a part number, SKU-like query, or fitment phrase. Add redirects or product tags so exact-match buyers land on the right products.',
+                    'Check whether "%s" matches a SKU, manufacturer part number, alternate part number, old part number, replacement part, barcode, or common customer-used format. Prioritise exact and normalised matches before broad keyword results.',
                     $cleanTerm
                 );
 
-            case 'Product/category coverage':
+            case 'Product or category may be missing':
                 return sprintf(
-                    'Check whether "%s" maps to an existing product or category. If it does, improve product tags and synonyms. If not, consider adding catalogue coverage or a targeted landing page.',
+                    'Check whether the store sells "%s", an equivalent product, or a close substitute. If it exists, improve findability. If not, treat repeated searches as catalogue demand or route customers to the closest helpful alternative.',
                     $cleanTerm
                 );
 
-            case 'Spelling or formatting variant':
+            case 'Spelling or format variant':
                 return sprintf(
-                    'Add "%s" as a spelling, punctuation, or formatting variant so customers still reach the intended products.',
+                    'Check whether "%s" is a common typo, abbreviation, spacing, punctuation, or singular/plural variant. Add it only when the intended product is clear, and avoid broad matches for SKU-like terms.',
                     $cleanTerm
                 );
 
-            case 'Long-tail search intent':
+            case 'Fitment or use case is unclear':
                 return sprintf(
-                    'Create or improve a targeted landing page, category page, or search redirect for the specific buying intent behind "%s".',
+                    'Check whether "%s" describes a specific application, compatibility need, model, size, material, system, or use case. If relevant products exist, add structured fitment data and clear product copy that connects the need to the right products.',
                     $cleanTerm
                 );
 
-            case 'Ambiguous search intent':
+            case 'Search term is too broad or unclear':
                 return sprintf(
-                    '"%s" is broad. Review the search results manually and consider a guided result page, redirect, or stronger category suggestions.',
+                    'Do not force a narrow synonym or redirect for "%s". Help customers narrow the search with better categories, filters, suggested terms, and result ordering.',
+                    $cleanTerm
+                );
+
+            case 'Results are weak or badly ranked':
+                return sprintf(
+                    'Search "%s" manually and review the top results. If the right products exist but rank poorly, adjust searchable attributes, search weights, product data, ranking rules, or merchandising boosts.',
                     $cleanTerm
                 );
 
             default:
                 return sprintf(
-                    'Review product matching, synonyms, redirects, and catalogue coverage for "%s".',
+                    'Check whether "%s" maps to a product, category, SKU, brand, synonym, redirect, compatibility need, or catalogue gap. If it repeats or has high revenue at risk, assign it to a clearer fix type after review.',
                     $cleanTerm
                 );
+        }
+    }
+
+    private function getPlainEnglishMeaning(string $term, string $fixType): string
+    {
+        return sprintf(
+            'Customers are telling you they want "%s", but Magento search may not be connecting that demand to a useful product, category, synonym, or search result.',
+            trim($term)
+        );
+    }
+
+    private function getMagentoFixSteps(string $term, string $fixType): array
+    {
+        $cleanTerm = trim($term);
+
+        switch ($fixType) {
+            case 'Brand or product terms are missing':
+                return [
+                    'Search Magento products for the term and close variations.',
+                    'Review brand, manufacturer, model, product family, and product-type attributes.',
+                    'Add missing terms to searchable product attributes where accurate.',
+                    'Improve product names or descriptions where useful.',
+                    'Reindex Magento search data and test the search again.',
+                ];
+
+            case 'Customers use different wording':
+                return [
+                    'Check whether the term maps to an existing product or category.',
+                    'Identify the catalogue wording currently used for the same product.',
+                    'Add safe synonyms or searchable terms where the meaning is the same.',
+                    'Update product or category copy only where the wording is accurate.',
+                    'Reindex Magento search data and test the search again.',
+                ];
+
+            case 'SKU or part number is not matching':
+                return [
+                    'Check whether the term matches a SKU, manufacturer part number, alternate part number, old part number, replacement part, or barcode.',
+                    'Review whether those identifiers are stored on the correct product.',
+                    'Make sure SKU and part-number fields are searchable where appropriate.',
+                    'Add alternate identifiers to product data if they are valid.',
+                    'Reindex Magento search data and test exact-match search behaviour.',
+                ];
+
+            case 'Product or category may be missing':
+                return [
+                    'Check whether the store already sells this product, an equivalent product, or a close substitute.',
+                    'If products exist, improve product naming, searchable attributes, category assignment, and discoverability.',
+                    'If a category exists, consider routing customers to the best category or landing page.',
+                    'If the store does not sell it, treat repeated searches as catalogue demand.',
+                    'Reindex Magento search data and test the search again.',
+                ];
+
+            case 'Spelling or format variant':
+                return [
+                    'Search for the intended product using corrected spelling or formatting.',
+                    'Identify common typo, punctuation, spacing, abbreviation, or singular/plural variants.',
+                    'Add safe variants to searchable product data or synonyms where the intent is clear.',
+                    'Avoid broad matching when the term looks SKU-like.',
+                    'Reindex Magento search data and test the search again.',
+                ];
+
+            case 'Fitment or use case is unclear':
+                return [
+                    'Review whether the term refers to compatibility, fitment, size, model, material, system, or application.',
+                    'Check whether relevant products include structured fitment or use-case data.',
+                    'Add compatibility, dimensions, material, or application data where useful.',
+                    'Improve product copy so customers can connect the use case to the right product.',
+                    'Reindex Magento search data and test the search again.',
+                ];
+
+            case 'Search term is too broad or unclear':
+                return [
+                    'Review the current search journey manually.',
+                    'Avoid forcing a narrow synonym or redirect unless the intent is clear.',
+                    'Improve categories, filters, and suggested search refinements.',
+                    'Use merchandising or ranking rules to improve the most useful results.',
+                    'Retest the storefront search experience.',
+                ];
+
+            case 'Results are weak or badly ranked':
+                return [
+                    'Search the term manually and review the top results.',
+                    'Check whether the right products exist but are buried below weaker results.',
+                    'Review searchable attributes and search weights.',
+                    'Reduce noisy attributes if they pollute search results.',
+                    'Reindex Magento search data and test again.',
+                ];
+
+            default:
+                return [
+                    'Search the term manually in Magento and on the storefront.',
+                    'Review matching products, categories, synonyms, redirects, and searchable attributes.',
+                    'Check whether this is a catalogue gap or a findability issue.',
+                    'Assign a clearer fix type after review.',
+                    'Reindex Magento search data and test again.',
+                ];
         }
     }
 
@@ -358,6 +460,8 @@ class SearchLossDataProvider
                 'opportunityScore' => $this->getOpportunityScore($count, $lostRevenue),
                 'fixType' => $fixType,
                 'suggestedFix' => $this->getSuggestedFix($termText, $fixType),
+                'plainEnglishMeaning' => $this->getPlainEnglishMeaning($termText, $fixType),
+                'magentoFixSteps' => $this->getMagentoFixSteps($termText, $fixType),
                 'confidence' => $this->getConfidence($count, $fixType),
                 'trend' => 'up'
             ];
