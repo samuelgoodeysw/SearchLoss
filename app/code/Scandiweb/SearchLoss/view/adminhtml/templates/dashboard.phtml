@@ -33,6 +33,16 @@ function priorityStyle($priority) {
 function money($value) {
     return '$' . number_format((float)$value, 0);
 }
+
+function tooltipLabel($label, $tooltip) {
+    return '<span class="searchloss-tooltip-label">'
+        . htmlspecialchars($label, ENT_QUOTES, 'UTF-8')
+        . '<span class="searchloss-tooltip-icon" tabindex="0">?</span>'
+        . '<span class="searchloss-tooltip-bubble">'
+        . htmlspecialchars($tooltip, ENT_QUOTES, 'UTF-8')
+        . '</span>'
+        . '</span>';
+}
 ?>
 
 <style>
@@ -48,6 +58,40 @@ function money($value) {
 .searchloss-label { color:#64748b; font-size:11px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
 .searchloss-value { margin-top:10px; color:#020617; font-size:30px; font-weight:900; letter-spacing:-.035em; }
 .searchloss-help { margin-top:7px; color:#64748b; font-size:13px; line-height:1.45; }
+.searchloss-tooltip-label { display:inline-flex; align-items:center; gap:6px; position:relative; vertical-align:middle; }
+.searchloss-tooltip-icon { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border:1px solid #cbd5e1; border-radius:999px; color:#64748b; background:#fff; font-size:11px; font-weight:900; line-height:1; cursor:help; flex:0 0 auto; }
+.searchloss-tooltip-icon:hover,
+.searchloss-tooltip-icon:focus { border-color:#93c5fd; color:#1d4ed8; background:#eff6ff; outline:none; }
+.searchloss-tooltip-bubble {
+    display:none;
+    position:absolute;
+    z-index:50;
+    left:0;
+    top:24px;
+    width:240px;
+    max-width:240px;
+    padding:10px 11px;
+    border:1px solid #cbd5e1;
+    border-radius:10px;
+    background:#0f172a;
+    color:#e2e8f0;
+    box-shadow:0 14px 30px rgba(15,23,42,.22);
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:0;
+    line-height:1.45;
+    text-transform:none;
+    white-space:normal;
+    word-break:break-word;
+    overflow-wrap:anywhere;
+}
+.searchloss-tooltip-label:hover .searchloss-tooltip-bubble,
+.searchloss-tooltip-icon:focus + .searchloss-tooltip-bubble { display:block; }
+.searchloss-table th .searchloss-tooltip-bubble { top:22px; }
+.searchloss-table th:nth-last-child(-n+4) .searchloss-tooltip-bubble {
+    left:auto;
+    right:0;
+}
 .searchloss-insights { display:grid; grid-template-columns:repeat(4,minmax(220px,1fr)); gap:14px; margin-bottom:18px; }
 .searchloss-insight { background:#fff; border:1px solid #d7dce2; border-radius:18px; padding:20px 22px; box-shadow:0 10px 24px rgba(15,23,42,.055); min-height:100%; }
 .searchloss-insight h3 { margin:0 0 9px; color:#020617; font-size:15px; font-weight:850; letter-spacing:-.01em; }
@@ -120,27 +164,27 @@ function money($value) {
 
 <div class="searchloss-grid">
         <div class="searchloss-card">
-            <div class="searchloss-label">Failed Terms</div>
+            <div class="searchloss-label"><?= tooltipLabel('Failed Terms', 'Unique customer search terms that returned zero results in the selected period.') ?></div>
             <div class="searchloss-value"><?= (int)$summary['failed_terms'] ?></div>
             <div class="searchloss-help">Unique zero-result terms.</div>
         </div>
         <div class="searchloss-card">
-            <div class="searchloss-label">Failed Searches</div>
+            <div class="searchloss-label"><?= tooltipLabel('Failed Searches', 'Total zero-result searches. This includes repeated searches for the same term.') ?></div>
             <div class="searchloss-value"><?= number_format((int)$summary['failed_searches']) ?></div>
             <div class="searchloss-help">Failed search demand.</div>
         </div>
         <div class="searchloss-card">
-            <div class="searchloss-label">Revenue at Risk</div>
+            <div class="searchloss-label"><?= tooltipLabel('Revenue at Risk', 'Directional estimate based on failed search demand, average order value, and search-to-order rate. Not guaranteed lost revenue.') ?></div>
             <div class="searchloss-value"><?= money($summary['lost_revenue']) ?></div>
             <div class="searchloss-help">Estimated revenue at risk.</div>
         </div>
         <div class="searchloss-card">
-            <div class="searchloss-label">AOV</div>
+            <div class="searchloss-label"><?= tooltipLabel('AOV', 'Average order value calculated from Magento orders, excluding cancelled orders.') ?></div>
             <div class="searchloss-value"><?= money($summary['aov']) ?></div>
             <div class="searchloss-help">From Magento orders.</div>
         </div>
         <div class="searchloss-card">
-            <div class="searchloss-label">Search-to-order rate</div>
+            <div class="searchloss-label"><?= tooltipLabel('Search-to-order rate', 'Estimated relationship between search volume and orders. Used to model missed demand value.') ?></div>
             <div class="searchloss-value"><?= number_format((float)$summary['conversion_rate'], 1) ?>%</div>
             <div class="searchloss-help">Used for revenue modelling.</div>
         </div>
@@ -205,12 +249,12 @@ function money($value) {
         <?php else: ?>
             <div class="searchloss-filter-bar">
                 <div class="searchloss-filter-field">
-                    <label for="searchloss-term-filter">Search terms</label>
+                    <label for="searchloss-term-filter"><?= tooltipLabel('Search terms', 'Filter the opportunity list by the customer search term.') ?></label>
                     <input id="searchloss-term-filter" type="search" placeholder="Search by customer search term...">
                 </div>
 
                 <div class="searchloss-filter-field">
-                    <label for="searchloss-priority-filter">Priority</label>
+                    <label for="searchloss-priority-filter"><?= tooltipLabel('Priority', 'Priority is based on search demand and estimated revenue at risk.') ?></label>
                     <select id="searchloss-priority-filter">
                         <option value="all">All priorities</option>
                         <option value="3">High</option>
@@ -221,14 +265,14 @@ function money($value) {
                 </div>
 
                 <div class="searchloss-filter-field">
-                    <label for="searchloss-issue-filter">Issue type</label>
+                    <label for="searchloss-issue-filter"><?= tooltipLabel('Issue type', 'The likely reason the search failed or produced weak discovery.') ?></label>
                     <select id="searchloss-issue-filter">
                         <option value="all">All issue types</option>
                     </select>
                 </div>
 
                 <div class="searchloss-filter-field">
-                    <label for="searchloss-sort-select">Sort by</label>
+                    <label for="searchloss-sort-select"><?= tooltipLabel('Sort by', 'Choose how to rank the visible opportunity list.') ?></label>
                     <select id="searchloss-sort-select">
                         <option value="revenue:desc">Revenue at risk high-low</option>
                         <option value="revenue:asc">Revenue at risk low-high</option>
@@ -252,14 +296,14 @@ function money($value) {
                 <table class="searchloss-table">
                     <thead>
                         <tr>
-                            <th><button type="button" class="searchloss-sort-button" data-sort-key="term">Term <span class="searchloss-sort-indicator">↕</span></button></th>
-                            <th><button type="button" class="searchloss-sort-button" data-sort-key="searches">Searches <span class="searchloss-sort-indicator">↕</span></button></th>
-                            <th><button type="button" class="searchloss-sort-button" data-sort-key="revenue">Revenue at Risk <span class="searchloss-sort-indicator">↕</span></button></th>
-                            <th><button type="button" class="searchloss-sort-button" data-sort-key="priority">Priority <span class="searchloss-sort-indicator">↕</span></button></th>
-                            <th><button type="button" class="searchloss-sort-button" data-sort-key="issue">Issue Type <span class="searchloss-sort-indicator">↕</span></button></th>
-                            <th><button type="button" class="searchloss-sort-button" data-sort-key="confidence">Confidence <span class="searchloss-sort-indicator">↕</span></button></th>
-                            <th>Suggested Action</th>
-                            <th>Details</th>
+                            <th><button type="button" class="searchloss-sort-button" data-sort-key="term"><?= tooltipLabel('Term', 'The exact words customers searched for.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
+                            <th><button type="button" class="searchloss-sort-button" data-sort-key="searches"><?= tooltipLabel('Searches', 'How many times customers searched this term in the selected period.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
+                            <th><button type="button" class="searchloss-sort-button" data-sort-key="revenue"><?= tooltipLabel('Revenue at Risk', 'Searches multiplied by average order value and search-to-order rate. Directional estimate only.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
+                            <th><button type="button" class="searchloss-sort-button" data-sort-key="priority"><?= tooltipLabel('Priority', 'High priority terms should usually be reviewed first.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
+                            <th><button type="button" class="searchloss-sort-button" data-sort-key="issue"><?= tooltipLabel('Issue Type', 'The likely Magento search, catalogue, product data, synonym, SKU, or category issue.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
+                            <th><button type="button" class="searchloss-sort-button" data-sort-key="confidence"><?= tooltipLabel('Confidence', 'How strongly the data suggests this issue type. Higher confidence usually means clearer next action.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
+                            <th><?= tooltipLabel('Suggested Action', 'Recommended next review or fix based on the likely issue type.') ?></th>
+                            <th><?= tooltipLabel('Details', 'Open the diagnostic row for plain-English explanation and Magento checks or fixes.') ?></th>
                         </tr>
                     </thead>
                     <tbody>
