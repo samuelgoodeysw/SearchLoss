@@ -388,6 +388,59 @@ function catalogEvidenceTooltip($label) {
     display: none;
 }
 
+
+.searchloss-evidence-note {
+    margin: 8px 0 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+
+.searchloss-evidence-summary {
+    margin: 0 0 10px;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.searchloss-evidence-details {
+    margin-top: 8px;
+}
+
+.searchloss-evidence-details summary {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    color: #1557d6;
+    font-size: 13px;
+    font-weight: 800;
+    list-style: none;
+}
+
+.searchloss-evidence-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.searchloss-evidence-details summary::after {
+    content: "↓";
+    margin-left: 6px;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.searchloss-evidence-details[open] summary {
+    margin-bottom: 10px;
+}
+
+.searchloss-evidence-details[open] summary::after {
+    content: "↑";
+}
+
 </style>
 
 <div class="searchloss-page">
@@ -599,11 +652,21 @@ function catalogEvidenceTooltip($label) {
                                             <p class="searchloss-detail-text">
                                                 <?= $block->escapeHtml($plainEnglishMeaning) ?>
                                             </p>
+                                            <p class="searchloss-evidence-note">
+                                                Evidence-led diagnosis. Review before making catalogue or search changes.
+                                            </p>
                                         </div>
 
                                         <div class="searchloss-detail-card">
                                             <div class="searchloss-detail-title">Catalog signal</div>
-                                            <?php if (empty($catalogEvidence)): ?>
+                                            <p class="searchloss-evidence-summary">
+                                                The diagnosis is the summary. Expand this section to see the Magento evidence behind it.
+                                            </p>
+
+                                            <details class="searchloss-evidence-details">
+                                                <summary>Show evidence behind diagnosis</summary>
+
+<?php if (empty($catalogEvidence)): ?>
                                                 <p class="searchloss-detail-text">No catalog evidence was available for this term.</p>
                                             <?php else: ?>
                                                 <div class="searchloss-evidence-list">
@@ -618,6 +681,7 @@ function catalogEvidenceTooltip($label) {
                                                     <?php endforeach; ?>
                                                 </div>
                                             <?php endif; ?>
+                                            </details>
                                         </div>
 <div class="searchloss-detail-card">
                                             <div class="searchloss-detail-title">Recommended fix</div>
