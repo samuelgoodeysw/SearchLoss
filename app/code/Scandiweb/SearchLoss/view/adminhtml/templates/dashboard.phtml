@@ -1044,3 +1044,48 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
+
+<script>
+(function () {
+    var storageKey = 'searchloss_period_scroll_y';
+
+    function restoreScrollPosition() {
+        var savedY = sessionStorage.getItem(storageKey);
+
+        if (savedY === null) {
+            return;
+        }
+
+        sessionStorage.removeItem(storageKey);
+
+        var y = parseInt(savedY, 10);
+
+        if (!isNaN(y)) {
+            window.requestAnimationFrame(function () {
+                window.scrollTo(0, y);
+            });
+        }
+    }
+
+    function rememberScrollBeforePeriodChange() {
+        var links = document.querySelectorAll('.searchloss-periods a');
+
+        links.forEach(function (link) {
+            link.addEventListener('click', function () {
+                sessionStorage.setItem(storageKey, String(window.scrollY || window.pageYOffset || 0));
+            });
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            rememberScrollBeforePeriodChange();
+            restoreScrollPosition();
+        });
+    } else {
+        rememberScrollBeforePeriodChange();
+        restoreScrollPosition();
+    }
+})();
+</script>
+
