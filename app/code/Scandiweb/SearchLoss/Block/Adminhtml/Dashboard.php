@@ -52,4 +52,31 @@ class Dashboard extends Template
     {
         return $this->dataProvider->getSummary($this->getCurrentPeriod());
     }
+
+    public function getDashboardPayload(): array
+    {
+        $payload = [];
+
+        foreach ($this->dataProvider->getDashboardData($this->getCurrentPeriod()) as $item) {
+            if (isset($item['key'], $item['value'])) {
+                $payload[$item['key']] = $item['value'];
+            }
+        }
+
+        return $payload;
+    }
+
+    public function getSearchData(): array
+    {
+        $payload = $this->getDashboardPayload();
+
+        return $payload['searchData'] ?? [];
+    }
+
+    public function getRankedFailedSearchTerms(): array
+    {
+        $payload = $this->getDashboardPayload();
+
+        return $payload['failedSearchTerms'] ?? [];
+    }
 }
