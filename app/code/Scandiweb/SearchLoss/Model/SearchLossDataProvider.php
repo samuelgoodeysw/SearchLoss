@@ -613,9 +613,30 @@ class SearchLossDataProvider
                 );
             }
 
+            if ((int)$visibilitySignals['notAssignedToWebsite'] > 0 && (int)$visibilitySignals['assignedToWebsite'] <= 0) {
+                return sprintf(
+                    'Related products were found for "%s", but they do not appear to be assigned to a Magento website. The products may exist in the catalogue, but not be available on the storefront customers are searching.',
+                    $cleanTerm
+                );
+            }
+
+            if ((int)$visibilitySignals['notAssignedToCategory'] > 0 && (int)$visibilitySignals['assignedToCategory'] <= 0) {
+                return sprintf(
+                    'Related products were found for "%s", but they do not appear to be assigned to a category. Customers may not be able to browse to them, and search may have less useful catalogue context.',
+                    $cleanTerm
+                );
+            }
+
             if ((int)$visibilitySignals['notVisibleInSearch'] > 0 && (int)$visibilitySignals['visibleInSearch'] <= 0) {
                 return sprintf(
                     'Related products were found for "%s", but they do not appear to be visible in search. Magento may have the product data, but customers may not be able to reach it through site search.',
+                    $cleanTerm
+                );
+            }
+
+            if ((int)$visibilitySignals['notAssignedToWebsite'] > 0 || (int)$visibilitySignals['notAssignedToCategory'] > 0) {
+                return sprintf(
+                    'Related products were found for "%s", but some may not be assigned to a website or category. Review website assignment, category assignment, visibility, and indexing before treating this as missing catalogue demand.',
                     $cleanTerm
                 );
             }
@@ -628,7 +649,7 @@ class SearchLossDataProvider
             }
 
             return sprintf(
-                'Related products were found for "%s", but Magento still returned zero results. Review product visibility, searchable attributes, synonyms, indexing, and customer wording before treating this as missing catalogue demand.',
+                'Related products were found for "%s", but Magento still returned zero results. Review product visibility, website assignment, category assignment, searchable attributes, synonyms, indexing, and customer wording before treating this as missing catalogue demand.',
                 $cleanTerm
             );
         }
