@@ -83,9 +83,98 @@ class SearchLossDataProvider
         return $orders / $searches;
     }
 
+    private function getCatalogueSignals(string $term): array
+    {
+        $connection = $this->resource->getConnection();
+        $cleanTerm = trim($term);
+        $likeTerm = '%' . $cleanTerm . '%';
+
+        $productEntityTable = $this->resource->getTableName('catalog_product_entity');
+        $productVarcharTable = $this->resource->getTableName('catalog_product_entity_varchar');
+        $categoryVarcharTable = $this->resource->getTableName('catalog_category_entity_varchar');
+        $eavAttributeTable = $this->resource->getTableName('eav_attribute');
+
+        $skuMatches = (int)$connection->fetchOne(
+            $connection->select()
+                ->from($productEntityTable, ['total' => 'COUNT(*)'])
+                ->where('sku LIKE ?', $likeTerm)
+        );
+
+        $productNameAttributeId = (int)$connection->fetchOne(
+            $connection->select()
+                ->from($eavAttributeTable, ['attribute_id'])
+                ->where('attribute_code = ?', 'name')
+                ->where('entity_type_id = (
+                    SELECT entity_type_id
+                    FROM ' . $this->resource->getTableName('eav_entity_type') . '
+                    WHERE entity_type_code = "catalog_product"
+                    LIMIT 1
+                )')
+                ->limit(1)
+        );
+
+        $categoryNameAttributeId = (int)$connection->fetchOne(
+            $connection->select()
+                ->from($eavAttributeTable, ['attribute_id'])
+                ->where('attribute_code = ?', 'name')
+                ->where('entity_type_id = (
+                    SELECT entity_type_id
+                    FROM ' . $this->resource->getTableName('eav_entity_type') . '
+                    WHERE entity_type_code = "catalog_category"
+                    LIMIT 1
+                )')
+                ->limit(1)
+        );
+
+        $productNameMatches = 0;
+
+        if ($productNameAttributeId > 0) {
+            $productNameMatches = (int)$connection->fetchOne(
+                $connection->select()
+                    ->from($productVarcharTable, ['total' => 'COUNT(DISTINCT entity_id)'])
+                    ->where('attribute_id = ?', $productNameAttributeId)
+                    ->where('value LIKE ?', $likeTerm)
+            );
+        }
+
+        $categoryNameMatches = 0;
+
+        if ($categoryNameAttributeId > 0) {
+            $categoryNameMatches = (int)$connection->fetchOne(
+                $connection->select()
+                    ->from($categoryVarcharTable, ['total' => 'COUNT(DISTINCT entity_id)'])
+                    ->where('attribute_id = ?', $categoryNameAttributeId)
+                    ->where('value LIKE ?', $likeTerm)
+            );
+        }
+
+        return [
+            'skuMatches' => $skuMatches,
+            'productNameMatches' => $productNameMatches,
+            'categoryNameMatches' => $categoryNameMatches,
+            'hasSkuMatch' => $skuMatches > 0,
+            'hasProductNameMatch' => $productNameMatches > 0,
+            'hasCategoryNameMatch' => $categoryNameMatches > 0,
+            'hasCatalogueMatch' => ($skuMatches + $productNameMatches + $categoryNameMatches) > 0,
+        ];
+    }
+
     private function getFixType(string $term): string
     {
         $normalized = strtolower(trim($term));
+        $catalogueSignals = $this->getCatalogueSignals($term);
+
+        if ($catalogueSignals['hasSkuMatch']) {
+            return 'Product exists but is not showing';
+        }
+
+        if (preg_match('/[a-z]*\d+[a-z\d\-\.]*/i', $term)) {
+            return 'SKU or part number is not matching';
+        }
+
+        if ($catalogueSignals['hasProductNameMatch'] || $catalogueSignals['hasCategoryNameMatch']) {
+            return 'Product exists but is not showing';
+        }
 
         if (preg_match('/hendrickson|dexter|al-ko|lippert|bpw|meritor|febi|saf/i', $normalized)) {
             return 'Brand or product terms are missing';
@@ -97,10 +186,6 @@ class SearchLossDataProvider
 
         if (preg_match('/nano\s+lea\.?f|lea\.f|sprng|suspention|bushng|galvani[sz]ed/i', $normalized)) {
             return 'Spelling or format variant';
-        }
-
-        if (preg_match('/[a-z]*\d+[a-z\d\-\.]*/i', $term)) {
-            return 'SKU or part number is not matching';
         }
 
         if (preg_match('/\b(axle|spring|suspension|brake|hub|bushing|bolt|nut|seal|kit|shackle|equalizer)\b/i', $normalized)) {
@@ -181,11 +266,71 @@ class SearchLossDataProvider
 
     private function getPlainEnglishMeaning(string $term, string $fixType): string
     {
-        return sprintf(
-            'Customers are telling you they want "%s", but Magento search may not be connecting that demand to a useful product, category, synonym, or search result.',
-            trim($term)
-        );
+        $cleanTerm = trim($term);
+
+        switch ($fixType) {
+            case 'Product exists but is not showing':
+                return sprintf(
+                    'A matching product or category may already exist for "%s", but Magento search may not be showing it to customers.',
+                    $cleanTerm
+                );
+
+            case 'Brand or product terms are missing':
+                return sprintf(
+                    '"%s" looks like a brand, manufacturer, model, or product-type search. Relevant products may exist, but they may not include the right searchable brand or product terms.',
+                    $cleanTerm
+                );
+
+            case 'Customers use different wording':
+                return sprintf(
+                    'Customers may be using "%s" to describe something the catalogue calls by a different name.',
+                    $cleanTerm
+                );
+
+            case 'SKU or part number is not matching':
+                return sprintf(
+                    '"%s" looks like a SKU, part number, manufacturer number, old part number, or customer-used identifier that search is not matching correctly.',
+                    $cleanTerm
+                );
+
+            case 'Product or category may be missing':
+                return sprintf(
+                    'Customers may be searching for "%s", but the store may not clearly offer it, expose it, or route customers to the closest useful alternative.',
+                    $cleanTerm
+                );
+
+            case 'Spelling or format variant':
+                return sprintf(
+                    '"%s" may be a typo, abbreviation, spacing variant, punctuation variant, or singular/plural version of a product customers expect to find.',
+                    $cleanTerm
+                );
+
+            case 'Fitment or use case is unclear':
+                return sprintf(
+                    '"%s" may describe a specific fitment, application, size, model, material, system, or use case that product data does not clearly answer.',
+                    $cleanTerm
+                );
+
+            case 'Search term is too broad or unclear':
+                return sprintf(
+                    '"%s" is broad or ambiguous, so customers may need better categories, filters, suggested terms, or result ordering to narrow their intent.',
+                    $cleanTerm
+                );
+
+            case 'Results are weak or badly ranked':
+                return sprintf(
+                    'The right products for "%s" may exist, but they may be buried below weaker or irrelevant search results.',
+                    $cleanTerm
+                );
+
+            default:
+                return sprintf(
+                    'Customers are telling you they want "%s", but Magento search may not be connecting that demand to a useful product, category, synonym, or search result.',
+                    $cleanTerm
+                );
+        }
     }
+
 
     private function getMagentoFixSteps(string $term, string $fixType): array
     {
