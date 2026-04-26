@@ -135,11 +135,16 @@ function tooltipLabel($label, $tooltip) {
 .searchloss-details-button:hover { background:#dbeafe; border-color:#93c5fd; }
 .searchloss-detail-row { display:none; }
 .searchloss-detail-cell { background:#f8fafc; padding:18px !important; }
-.searchloss-detail-grid { display:grid; grid-template-columns:minmax(220px,.8fr) minmax(320px,1.2fr); gap:14px; }
+.searchloss-detail-grid { display:grid; grid-template-columns:minmax(220px,.8fr) minmax(260px,1fr) minmax(320px,1.2fr); gap:14px; }
 .searchloss-detail-card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:14px; }
 .searchloss-detail-title { color:#0f172a; font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; margin-bottom:8px; }
 .searchloss-detail-text { color:#334155; font-size:13px; line-height:1.6; margin:0; }
 .searchloss-steps { margin:0; padding-left:18px; color:#334155; font-size:13px; line-height:1.6; }
+.searchloss-evidence-list { display:grid; gap:8px; margin:0; }
+.searchloss-evidence-item { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid #e5e7eb; }
+.searchloss-evidence-item:last-child { border-bottom:0; }
+.searchloss-evidence-label { color:#64748b; font-size:12px; font-weight:800; }
+.searchloss-evidence-value { color:#0f172a; font-size:12px; font-weight:800; text-align:right; overflow-wrap:anywhere; max-width:62%; line-height:1.45; }
 @media (max-width:1400px) { .searchloss-insights { grid-template-columns:repeat(2,minmax(220px,1fr)); } }
 @media (max-width:768px) { .searchloss-insights { grid-template-columns:1fr; } }
 @media (max-width:1200px) { .searchloss-grid { grid-template-columns:repeat(2,minmax(160px,1fr)); } }
@@ -315,6 +320,7 @@ function tooltipLabel($label, $tooltip) {
                                 $suggestedFix = $term['suggestedFix'] ?? 'Review this search term against products, categories, synonyms, redirects, and catalog coverage.';
                                 $plainEnglishMeaning = $term['plainEnglishMeaning'] ?? 'This term shows customer demand, but the likely cause needs manual review.';
                                 $magentoFixSteps = $term['magentoFixSteps'] ?? [];
+                                $catalogEvidence = $term['catalogEvidence'] ?? [];
                                 $detailId = 'searchloss-detail-' . md5(($term['term'] ?? '') . '-' . ($term['count'] ?? '0'));
 
                                 $priorityRank = ['High' => 3, 'Medium' => 2, 'Low' => 1, 'Review' => 0][$priority] ?? 0;
@@ -354,14 +360,30 @@ function tooltipLabel($label, $tooltip) {
                                 <td colspan="8" class="searchloss-detail-cell">
                                     <div class="searchloss-detail-grid">
                                         <div class="searchloss-detail-card">
-                                            <div class="searchloss-detail-title">What this means</div>
+                                            <div class="searchloss-detail-title">Diagnosis</div>
                                             <p class="searchloss-detail-text">
                                                 <?= $block->escapeHtml($plainEnglishMeaning) ?>
                                             </p>
                                         </div>
 
                                         <div class="searchloss-detail-card">
-                                            <div class="searchloss-detail-title">Magento checks / fixes</div>
+                                            <div class="searchloss-detail-title">Catalog signal</div>
+                                            <?php if (empty($catalogEvidence)): ?>
+                                                <p class="searchloss-detail-text">No catalog evidence was available for this term.</p>
+                                            <?php else: ?>
+                                                <div class="searchloss-evidence-list">
+                                                    <?php foreach ($catalogEvidence as $item): ?>
+                                                        <div class="searchloss-evidence-item">
+                                                            <span class="searchloss-evidence-label"><?= $block->escapeHtml($item['label'] ?? '') ?></span>
+                                                            <span class="searchloss-evidence-value"><?= $block->escapeHtml($item['value'] ?? '') ?></span>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <div class="searchloss-detail-card">
+                                            <div class="searchloss-detail-title">Recommended fix</div>
                                             <?php if (empty($magentoFixSteps)): ?>
                                                 <p class="searchloss-detail-text">Review this term manually against products, categories, synonyms, redirects, and searchable attributes.</p>
                                             <?php else: ?>
