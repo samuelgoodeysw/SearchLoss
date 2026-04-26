@@ -91,6 +91,133 @@ class SearchLossDataProvider
         return $orders / $searches;
     }
 
+
+    private function getProductAttributeId(string $attributeCode): int
+    {
+        $connection = $this->resource->getConnection();
+
+        return (int)$connection->fetchOne(
+            $connection->select()
+                ->from($this->resource->getTableName('eav_attribute'), ['attribute_id'])
+                ->where('attribute_code = ?', $attributeCode)
+                ->where('entity_type_id = (
+                    SELECT entity_type_id
+                    FROM ' . $this->resource->getTableName('eav_entity_type') . '
+                    WHERE entity_type_code = "catalog_product"
+                    LIMIT 1
+                )')
+                ->limit(1)
+        );
+    }
+
+    private function getProductVisibilitySignals(string $term, array $tokens): array
+    {
+        $connection = $this->resource->getConnection();
+
+        $productEntityTable = $this->resource->getTableName('catalog_product_entity');
+        $productVarcharTable = $this->resource->getTableName('catalog_product_entity_varchar');
+        $productIntTable = $this->resource->getTableName('catalog_product_entity_int');
+
+        $nameAttributeId = $this->getProductAttributeId('name');
+        $statusAttributeId = $this->getProductAttributeId('status');
+        $visibilityAttributeId = $this->getProductAttributeId('visibility');
+
+        if ($nameAttributeId <= 0) {
+            return [
+                'relatedProductsChecked' => 0,
+                'enabledProducts' => 0,
+                'disabledProducts' => 0,
+                'visibleInSearch' => 0,
+                'notVisibleInSearch' => 0,
+            ];
+        }
+
+        $cleanTerm = trim($term);
+        $likeTerm = '%' . $cleanTerm . '%';
+
+        $conditions = [
+            $connection->quoteInto('p.sku LIKE ?', $likeTerm),
+            $connection->quoteInto('(name.value LIKE ?)', $likeTerm),
+        ];
+
+        foreach ($tokens as $token) {
+            $conditions[] = $connection->quoteInto('(name.value LIKE ?)', '%' . $token . '%');
+            $conditions[] = $connection->quoteInto('p.sku LIKE ?', '%' . $token . '%');
+        }
+
+        $baseSelect = $connection->select()
+            ->from(['p' => $productEntityTable], ['entity_id'])
+            ->joinLeft(
+                ['name' => $productVarcharTable],
+                'name.entity_id = p.entity_id AND name.attribute_id = ' . (int)$nameAttributeId,
+                []
+            )
+            ->where('(' . implode(' OR ', $conditions) . ')')
+            ->group('p.entity_id')
+            ->limit(50);
+
+        $productIds = $connection->fetchCol($baseSelect);
+
+        if (empty($productIds)) {
+            return [
+                'relatedProductsChecked' => 0,
+                'enabledProducts' => 0,
+                'disabledProducts' => 0,
+                'visibleInSearch' => 0,
+                'notVisibleInSearch' => 0,
+            ];
+        }
+
+        $enabledProducts = 0;
+        $disabledProducts = 0;
+        $visibleInSearch = 0;
+        $notVisibleInSearch = 0;
+
+        if ($statusAttributeId > 0) {
+            $enabledProducts = (int)$connection->fetchOne(
+                $connection->select()
+                    ->from($productIntTable, ['total' => 'COUNT(DISTINCT entity_id)'])
+                    ->where('attribute_id = ?', $statusAttributeId)
+                    ->where('entity_id IN (?)', $productIds)
+                    ->where('value = ?', 1)
+            );
+
+            $disabledProducts = (int)$connection->fetchOne(
+                $connection->select()
+                    ->from($productIntTable, ['total' => 'COUNT(DISTINCT entity_id)'])
+                    ->where('attribute_id = ?', $statusAttributeId)
+                    ->where('entity_id IN (?)', $productIds)
+                    ->where('value = ?', 2)
+            );
+        }
+
+        if ($visibilityAttributeId > 0) {
+            $visibleInSearch = (int)$connection->fetchOne(
+                $connection->select()
+                    ->from($productIntTable, ['total' => 'COUNT(DISTINCT entity_id)'])
+                    ->where('attribute_id = ?', $visibilityAttributeId)
+                    ->where('entity_id IN (?)', $productIds)
+                    ->where('value IN (?)', [3, 4])
+            );
+
+            $notVisibleInSearch = (int)$connection->fetchOne(
+                $connection->select()
+                    ->from($productIntTable, ['total' => 'COUNT(DISTINCT entity_id)'])
+                    ->where('attribute_id = ?', $visibilityAttributeId)
+                    ->where('entity_id IN (?)', $productIds)
+                    ->where('value IN (?)', [1, 2])
+            );
+        }
+
+        return [
+            'relatedProductsChecked' => count($productIds),
+            'enabledProducts' => $enabledProducts,
+            'disabledProducts' => $disabledProducts,
+            'visibleInSearch' => $visibleInSearch,
+            'notVisibleInSearch' => $notVisibleInSearch,
+        ];
+    }
+
     private function getCatalogueSignals(string $term): array
     {
         $connection = $this->resource->getConnection();
@@ -199,6 +326,7 @@ class SearchLossDataProvider
     {
         $signals = $this->getCatalogueSignals($term);
         $tokens = $this->getSearchTokens($term);
+        $visibilitySignals = $this->getProductVisibilitySignals($term, $tokens);
 
         $connection = $this->resource->getConnection();
         $productVarcharTable = $this->resource->getTableName('catalog_product_entity_varchar');
@@ -282,10 +410,15 @@ class SearchLossDataProvider
         return [
             ['label' => 'Search words checked', 'value' => empty($tokens) ? 'None' : implode(', ', $tokens)],
             ['label' => 'SKU matches', 'value' => (string)$signals['skuMatches']],
-            ['label' => 'Exact product matches', 'value' => (string)$signals['productNameMatches']],
-            ['label' => 'Related product matches', 'value' => (string)$relatedProductMatches],
-            ['label' => 'Exact category matches', 'value' => (string)$signals['categoryNameMatches']],
-            ['label' => 'Related category matches', 'value' => (string)$relatedCategoryMatches],
+            ['label' => 'Full-phrase product matches', 'value' => (string)$signals['productNameMatches']],
+            ['label' => 'Keyword product matches', 'value' => (string)$relatedProductMatches],
+            ['label' => 'Related product matches', 'value' => (string)$visibilitySignals['relatedProductsChecked']],
+            ['label' => 'Enabled product matches', 'value' => (string)$visibilitySignals['enabledProducts']],
+            ['label' => 'Disabled product matches', 'value' => (string)$visibilitySignals['disabledProducts']],
+            ['label' => 'Visible in search', 'value' => (string)$visibilitySignals['visibleInSearch']],
+            ['label' => 'Not visible in search', 'value' => (string)$visibilitySignals['notVisibleInSearch']],
+            ['label' => 'Full-phrase category matches', 'value' => (string)$signals['categoryNameMatches']],
+            ['label' => 'Keyword category matches', 'value' => (string)$relatedCategoryMatches],
             ['label' => 'Catalog signal', 'value' => $status],
             ['label' => 'What this suggests', 'value' => $suggestion],
         ];
@@ -337,6 +470,7 @@ class SearchLossDataProvider
 
     private function getSuggestedFix(string $term, string $fixType): string
     {
+
         $cleanTerm = trim($term);
 
         switch ($fixType) {
@@ -396,9 +530,74 @@ class SearchLossDataProvider
         }
     }
 
+    private function getShortSuggestedAction(string $term, string $fixType): string
+    {
+        switch ($fixType) {
+            case 'Product exists but is not showing':
+                return 'Review search indexing, searchable attributes, and result visibility.';
+
+            case 'Brand or product terms are missing':
+                return 'Add missing brand or product terms to searchable product data.';
+
+            case 'Customers use different wording':
+                return 'Map customer wording to the catalog language with safe synonyms.';
+
+            case 'SKU or part number is not matching':
+                return 'Review SKU, part-number, and alternate identifier search matching.';
+
+            case 'Product or category may be missing':
+                return 'Review catalog coverage or route customers to the closest category.';
+
+            case 'Spelling or format variant':
+                return 'Add safe spelling, spacing, punctuation, or format variants.';
+
+            case 'Fitment or use case is unclear':
+                return 'Improve fitment, compatibility, size, or use-case product data.';
+
+            case 'Search term is too broad or unclear':
+                return 'Improve categories, filters, suggestions, and result ordering.';
+
+            case 'Results are weak or badly ranked':
+                return 'Review result ranking, searchable attributes, and merchandising rules.';
+
+            default:
+                return 'Review matching products, categories, synonyms, redirects, and product data.';
+        }
+    }
+
     private function getPlainEnglishMeaning(string $term, string $fixType): string
     {
+
         $cleanTerm = trim($term);
+        $visibilitySignals = $this->getProductVisibilitySignals($term, $this->getSearchTokens($term));
+
+        if ((int)$visibilitySignals['relatedProductsChecked'] > 0) {
+            if ((int)$visibilitySignals['disabledProducts'] > 0 && (int)$visibilitySignals['enabledProducts'] <= 0) {
+                return sprintf(
+                    'Related products were found for "%s", but they appear to be disabled in Magento. Customers may be searching for products that exist in the catalogue but are not currently sellable or visible.',
+                    $cleanTerm
+                );
+            }
+
+            if ((int)$visibilitySignals['notVisibleInSearch'] > 0 && (int)$visibilitySignals['visibleInSearch'] <= 0) {
+                return sprintf(
+                    'Related products were found for "%s", but they do not appear to be visible in search. Magento may have the product data, but customers may not be able to reach it through site search.',
+                    $cleanTerm
+                );
+            }
+
+            if ((int)$visibilitySignals['visibleInSearch'] > 0) {
+                return sprintf(
+                    'Related products for "%s" appear to exist and be visible in search, but Magento still returned zero results. This points toward indexing, searchable attributes, synonyms, or search configuration rather than a simple catalogue gap.',
+                    $cleanTerm
+                );
+            }
+
+            return sprintf(
+                'Related products were found for "%s", but Magento still returned zero results. Review product visibility, searchable attributes, synonyms, indexing, and customer wording before treating this as missing catalogue demand.',
+                $cleanTerm
+            );
+        }
 
         switch ($fixType) {
             case 'Product exists but is not showing':
@@ -737,6 +936,7 @@ class SearchLossDataProvider
                 'opportunityScore' => $this->getOpportunityScore($count, $lostRevenue),
                 'fixType' => $fixType,
                 'suggestedFix' => $this->getSuggestedFix($termText, $fixType),
+                'shortSuggestedAction' => $this->getShortSuggestedAction($termText, $fixType),
                 'plainEnglishMeaning' => $this->getPlainEnglishMeaning($termText, $fixType),
                 'magentoFixSteps' => $this->getMagentoFixSteps($termText, $fixType),
                 'catalogEvidence' => $this->getCatalogEvidence($termText),

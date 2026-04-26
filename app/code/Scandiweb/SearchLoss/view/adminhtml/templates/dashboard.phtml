@@ -43,6 +43,26 @@ function tooltipLabel($label, $tooltip) {
         . '</span>'
         . '</span>';
 }
+
+function catalogEvidenceTooltip($label) {
+    $tooltips = [
+        'Search words checked' => 'The key words taken from the customer search and checked against Magento product and category data.',
+        'SKU matches' => 'Products with a SKU that matches the customer search. If this is above zero, search may not be finding SKU data correctly.',
+        'Full-phrase product matches' => 'Products whose name contains the full search phrase. If this is above zero but search failed, Magento may not be searching the right product data.',
+        'Keyword product matches' => 'Products whose name contains one or more key words from the search. This can show related products even when the exact phrase does not exist.',
+        'Related product matches' => 'Products or SKUs found in Magento that look related to this failed search. If this is above zero but search failed, review product wording, searchable attributes, synonyms, and indexing.',
+        'Enabled product matches' => 'Related products that are enabled in Magento. If enabled products exist but search failed, review search visibility, searchable attributes, synonyms, and indexing.',
+        'Disabled product matches' => 'Related products that are disabled in Magento. Customers may be searching for items that exist in the catalogue but are not currently sellable or visible.',
+        'Visible in search' => 'Related products set to appear in search or catalogue/search. If this is above zero but search failed, review indexing, search configuration, and searchable attributes.',
+        'Not visible in search' => 'Related products that are not set to appear in search. Review these if they should help customers find this term.',
+        'Full-phrase category matches' => 'Categories whose name contains the full search phrase. If this is above zero, the search may need to route customers to that category.',
+        'Keyword category matches' => 'Categories whose name contains one or more key words from the search. This can show a related category path for the failed search.',
+        'Catalog signal' => 'A quick summary of whether Magento appears to have matching or related catalog data for this failed search.',
+        'What this suggests' => 'What the catalog evidence likely means: missing catalog coverage, weak product data, missing synonyms, or search not connecting customer wording to Magento data.',
+    ];
+
+    return $tooltips[$label] ?? 'Extra Magento catalog context for this failed search.';
+}
 ?>
 
 <style>
@@ -143,7 +163,7 @@ function tooltipLabel($label, $tooltip) {
 .searchloss-evidence-list { display:grid; gap:8px; margin:0; }
 .searchloss-evidence-item { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid #e5e7eb; }
 .searchloss-evidence-item:last-child { border-bottom:0; }
-.searchloss-evidence-label { color:#64748b; font-size:12px; font-weight:800; }
+.searchloss-evidence-label { color:#64748b; font-size:12px; font-weight:800; display:inline-flex; align-items:center; }
 .searchloss-evidence-value { color:#0f172a; font-size:12px; font-weight:800; text-align:right; overflow-wrap:anywhere; max-width:62%; line-height:1.45; }
 @media (max-width:1400px) { .searchloss-insights { grid-template-columns:repeat(2,minmax(220px,1fr)); } }
 @media (max-width:768px) { .searchloss-insights { grid-template-columns:1fr; } }
@@ -154,16 +174,226 @@ function tooltipLabel($label, $tooltip) {
     .searchloss-periods { justify-content:flex-start; }
 }
 
+
+.search-loss-action-links {
+    margin: 0 0 18px;
+    padding: 14px 16px;
+    border: 1px solid #dbe7f3;
+    border-radius: 12px;
+    background: #f8fbff;
+}
+
+.search-loss-action-links__title {
+    margin: 0 0 10px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #253858;
+}
+
+.search-loss-action-links__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.search-loss-action-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 7px 12px;
+    border: 1px solid #bdd6f3;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #1557d6;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+.search-loss-action-link:hover,
+.search-loss-action-link:focus {
+    border-color: #7eb6f6;
+    background: #eef6ff;
+    color: #0b48bf;
+    text-decoration: none;
+}
+
+.search-loss-action-links__note {
+    margin: 10px 0 0;
+    font-size: 12px;
+    color: #5f6f89;
+}
+
+
+.searchloss-action-links {
+    background: #f8fbff;
+    border: 1px solid #dbe7f3;
+    border-radius: 14px;
+    padding: 14px;
+}
+
+.searchloss-action-links .searchloss-detail-title {
+    margin-bottom: 10px;
+}
+
+.searchloss-action-links-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.searchloss-action-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 7px 12px;
+    border: 1px solid #bdd6f3;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #1557d6;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+.searchloss-action-link:hover,
+.searchloss-action-link:focus {
+    border-color: #7eb6f6;
+    background: #eef6ff;
+    color: #0b48bf;
+    text-decoration: none;
+}
+
+.searchloss-action-links-note {
+    margin: 10px 0 0;
+    font-size: 12px;
+    color: #5f6f89;
+}
+
+
+.searchloss-detail-card {
+    align-self: start;
+}
+
+.searchloss-detail-card--fix {
+    grid-column: 1 / -1;
+}
+
+.searchloss-action-links {
+    min-height: 0;
+}
+
+.searchloss-action-links-buttons {
+    align-items: center;
+}
+
+.searchloss-action-links-note {
+    margin-top: 8px;
+    line-height: 1.4;
+}
+
+@media (max-width: 1024px) {
+    .searchloss-detail-card--fix {
+        grid-column: auto;
+    }
+}
+
+
+/* Search Loss expanded-row layout polish */
+.searchloss-detail-card,
+.searchloss-action-links {
+    align-self: start;
+}
+
+.searchloss-action-links {
+    order: 4;
+    min-height: 0;
+}
+
+.searchloss-detail-card--fix {
+    order: 3;
+    grid-column: auto;
+}
+
+.searchloss-action-links-buttons {
+    align-items: center;
+}
+
+.searchloss-action-links-note {
+    margin-top: 8px;
+    line-height: 1.4;
+}
+
+@media (max-width: 1024px) {
+    .searchloss-action-links,
+    .searchloss-detail-card--fix {
+        order: initial;
+        grid-column: auto;
+    }
+}
+
+
+/* Compact Magento action links inside Recommended Fix */
+.searchloss-inline-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.searchloss-inline-actions-label {
+    font-weight: 700;
+    color: #475569;
+}
+
+.searchloss-inline-action-link {
+    color: #1557d6;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.searchloss-inline-action-link:hover,
+.searchloss-inline-action-link:focus {
+    color: #0b48bf;
+    text-decoration: underline;
+}
+
+.searchloss-inline-actions-separator {
+    color: #cbd5e1;
+}
+
+
+/* Reset expanded-row card ordering after inline Magento links */
+.searchloss-detail-card--fix {
+    grid-column: auto;
+    order: initial;
+}
+
+.searchloss-action-links {
+    display: none;
+}
+
 </style>
 
 <div class="searchloss-page">
     <div class="searchloss-hero">
-        <h1>Search Loss</h1>
+        <h1>Search Opportunity Dashboard</h1>
         <p>
-            See which failed searches are costing demand, revenue, and product discovery opportunities.
+            Find failed searches, estimate revenue at risk, and see what Magento should review first.
         </p>
         <div class="searchloss-status">
-            Prioritized by demand, revenue at risk, and likely Magento fix.
+            Read-only Magento diagnostic. No storefront changes made.
         </div>
     </div>
 
@@ -197,23 +427,23 @@ function tooltipLabel($label, $tooltip) {
 
     <div class="searchloss-insights">
         <div class="searchloss-insight">
-            <h3>Search reveals buyer intent</h3>
+            <h3>Demand signal</h3>
             <p>
-                Customers who search are often telling you exactly what they want. Failed searches are missed buying intent.
+                Customers are telling you what they could not find. Repeated failed searches point to missed demand.
             </p>
         </div>
 
         <div class="searchloss-insight">
-            <h3>Lost demand is measurable</h3>
+            <h3>Revenue model</h3>
             <p>
-                This period shows <?= number_format((int)$summary['failed_searches']) ?> failed searches and <?= money($summary['lost_revenue']) ?> in directional revenue at risk.
+                This view shows <?= number_format((int)$summary['failed_searches']) ?> failed searches and <?= money($summary['lost_revenue']) ?> in directional revenue at risk.
             </p>
         </div>
 
         <div class="searchloss-insight">
-            <h3>Start with the biggest wins</h3>
+            <h3>Fix path</h3>
             <p>
-                Prioritise search issues with the clearest commercial upside and highest fix confidence.
+                Each opportunity points to a likely Magento catalogue, synonym, SKU, or search issue.
             </p>
         </div>
 
@@ -236,7 +466,7 @@ function tooltipLabel($label, $tooltip) {
             <div class="searchloss-section-head">
                 <div class="searchloss-section-copy">
                     <h2>Ranked search opportunities</h2>
-                    <p>Highest-priority failed searches based on demand, estimated revenue at risk, likely issue type, and confidence.</p>
+                    <p>Highest-priority failed searches ranked by demand, estimated revenue at risk, likely issue type, and confidence.</p>
                 </div>
 
                 <div class="searchloss-periods">
@@ -318,6 +548,7 @@ function tooltipLabel($label, $tooltip) {
                                 $fixType = $term['fixType'] ?? 'Needs manual review';
                                 $confidence = $term['confidence'] ?? 'Review';
                                 $suggestedFix = $term['suggestedFix'] ?? 'Review this search term against products, categories, synonyms, redirects, and catalog coverage.';
+                                $shortSuggestedAction = $term['shortSuggestedAction'] ?? $suggestedFix;
                                 $plainEnglishMeaning = $term['plainEnglishMeaning'] ?? 'This term shows customer demand, but the likely cause needs manual review.';
                                 $magentoFixSteps = $term['magentoFixSteps'] ?? [];
                                 $catalogEvidence = $term['catalogEvidence'] ?? [];
@@ -345,7 +576,7 @@ function tooltipLabel($label, $tooltip) {
                                 <td><span class="searchloss-pill" style="<?= priorityStyle($priority) ?>"><?= $block->escapeHtml($priority) ?></span></td>
                                 <td><?= $block->escapeHtml($fixType) ?></td>
                                 <td><?= $block->escapeHtml($confidence) ?></td>
-                                <td class="searchloss-action"><?= $block->escapeHtml($suggestedFix) ?></td>
+                                <td class="searchloss-action"><?= $block->escapeHtml($shortSuggestedAction) ?></td>
                                 <td>
                                     <button
                                         type="button"
@@ -374,16 +605,35 @@ function tooltipLabel($label, $tooltip) {
                                                 <div class="searchloss-evidence-list">
                                                     <?php foreach ($catalogEvidence as $item): ?>
                                                         <div class="searchloss-evidence-item">
-                                                            <span class="searchloss-evidence-label"><?= $block->escapeHtml($item['label'] ?? '') ?></span>
+                                                            <?php $evidenceLabel = (string)($item['label'] ?? ''); ?>
+                                                            <span class="searchloss-evidence-label">
+                                                                <?= tooltipLabel($evidenceLabel, catalogEvidenceTooltip($evidenceLabel)) ?>
+                                                            </span>
                                                             <span class="searchloss-evidence-value"><?= $block->escapeHtml($item['value'] ?? '') ?></span>
                                                         </div>
                                                     <?php endforeach; ?>
                                                 </div>
                                             <?php endif; ?>
                                         </div>
-
-                                        <div class="searchloss-detail-card">
+<div class="searchloss-detail-card">
                                             <div class="searchloss-detail-title">Recommended fix</div>
+                                            <div class="searchloss-inline-actions">
+                                                <span class="searchloss-inline-actions-label">Shortcuts:</span>
+                                                <a class="searchloss-inline-action-link" href="<?= $block->getUrl('catalog/product/index') ?>" target="_blank" rel="noopener">Products</a>
+                                                <span class="searchloss-inline-actions-separator">|</span>
+                                                <a class="searchloss-inline-action-link" href="<?= $block->getUrl('catalog/category/index') ?>" target="_blank" rel="noopener">Categories</a>
+                                                <span class="searchloss-inline-actions-separator">|</span>
+                                                <a class="searchloss-inline-action-link" href="<?= $block->getUrl('catalog/search/index') ?>" target="_blank" rel="noopener">Search terms</a>
+                                                <span class="searchloss-inline-actions-separator">|</span>
+                                                <a class="searchloss-inline-action-link" href="<?= $block->getUrl('indexer/indexer/list') ?>" target="_blank" rel="noopener">Indexes</a>
+                                                <span class="searchloss-inline-actions-separator">|</span>
+                                                <a class="searchloss-inline-action-link" href="<?= $block->getUrl('adminhtml/cache/index') ?>" target="_blank" rel="noopener">Cache</a>
+                                            </div>
+
+                                            <p class="searchloss-detail-text" style="margin-bottom:10px;">
+                                                <?= $block->escapeHtml($suggestedFix) ?>
+                                            </p>
+
                                             <?php if (empty($magentoFixSteps)): ?>
                                                 <p class="searchloss-detail-text">Review this term manually against products, categories, synonyms, redirects, and searchable attributes.</p>
                                             <?php else: ?>
