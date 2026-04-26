@@ -55,6 +55,15 @@ function money($value) {
 .searchloss-pill { display:inline-flex; align-items:center; border:1px solid #cbd5e1; border-radius:999px; padding:3px 8px; font-size:11px; font-weight:800; white-space:nowrap; }
 .searchloss-action { min-width:340px; color:#475569; }
 .searchloss-empty { padding:22px; color:#64748b; font-size:13px; }
+.searchloss-details-button { border:1px solid #bfdbfe; background:#eff6ff; color:#1d4ed8; border-radius:8px; padding:5px 9px; font-size:12px; font-weight:700; cursor:pointer; }
+.searchloss-details-button:hover { background:#dbeafe; border-color:#93c5fd; }
+.searchloss-detail-row { display:none; }
+.searchloss-detail-cell { background:#f8fafc; padding:18px !important; }
+.searchloss-detail-grid { display:grid; grid-template-columns:minmax(220px,.8fr) minmax(320px,1.2fr); gap:14px; }
+.searchloss-detail-card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:14px; }
+.searchloss-detail-title { color:#0f172a; font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; margin-bottom:8px; }
+.searchloss-detail-text { color:#334155; font-size:13px; line-height:1.6; margin:0; }
+.searchloss-steps { margin:0; padding-left:18px; color:#334155; font-size:13px; line-height:1.6; }
 @media (max-width:1200px) { .searchloss-grid { grid-template-columns:repeat(2,minmax(160px,1fr)); } }
 </style>
 
@@ -123,6 +132,7 @@ function money($value) {
                             <th>Issue Type</th>
                             <th>Confidence</th>
                             <th>Suggested Action</th>
+                            <th>Details</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -132,6 +142,9 @@ function money($value) {
                                 $fixType = $term['fixType'] ?? 'Needs manual review';
                                 $confidence = $term['confidence'] ?? 'Review';
                                 $suggestedFix = $term['suggestedFix'] ?? 'Review this search term against products, categories, synonyms, redirects, and catalogue coverage.';
+                                $plainEnglishMeaning = $term['plainEnglishMeaning'] ?? 'This term shows customer demand, but the likely cause needs manual review.';
+                                $magentoFixSteps = $term['magentoFixSteps'] ?? [];
+                                $detailId = 'searchloss-detail-' . md5(($term['term'] ?? '') . '-' . ($term['count'] ?? '0'));
                             ?>
                             <tr>
                                 <td><span class="searchloss-term"><?= $block->escapeHtml($term['term'] ?? '') ?></span></td>
@@ -141,6 +154,40 @@ function money($value) {
                                 <td><?= $block->escapeHtml($fixType) ?></td>
                                 <td><?= $block->escapeHtml($confidence) ?></td>
                                 <td class="searchloss-action"><?= $block->escapeHtml($suggestedFix) ?></td>
+                                <td>
+                                    <button
+                                        type="button"
+                                        class="searchloss-details-button"
+                                        data-searchloss-target="<?= $block->escapeHtmlAttr($detailId) ?>"
+                                    >
+                                        View
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr id="<?= $block->escapeHtmlAttr($detailId) ?>" class="searchloss-detail-row">
+                                <td colspan="8" class="searchloss-detail-cell">
+                                    <div class="searchloss-detail-grid">
+                                        <div class="searchloss-detail-card">
+                                            <div class="searchloss-detail-title">What this means</div>
+                                            <p class="searchloss-detail-text">
+                                                <?= $block->escapeHtml($plainEnglishMeaning) ?>
+                                            </p>
+                                        </div>
+
+                                        <div class="searchloss-detail-card">
+                                            <div class="searchloss-detail-title">Magento checks / fixes</div>
+                                            <?php if (empty($magentoFixSteps)): ?>
+                                                <p class="searchloss-detail-text">Review this term manually against products, categories, synonyms, redirects, and searchable attributes.</p>
+                                            <?php else: ?>
+                                                <ol class="searchloss-steps">
+                                                    <?php foreach ($magentoFixSteps as $step): ?>
+                                                        <li><?= $block->escapeHtml($step) ?></li>
+                                                    <?php endforeach; ?>
+                                                </ol>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -149,3 +196,16 @@ function money($value) {
         <?php endif; ?>
     </div>
 </div>
+
+<script>
+require(['jquery'], function ($) {
+    $('.searchloss-details-button').on('click', function () {
+        var target = $(this).data('searchloss-target');
+        var row = $('#' + target);
+
+        row.toggle();
+
+        $(this).text(row.is(':visible') ? 'Hide' : 'View');
+    });
+});
+</script>

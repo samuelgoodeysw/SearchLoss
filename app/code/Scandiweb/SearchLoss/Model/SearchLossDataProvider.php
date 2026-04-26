@@ -179,6 +179,102 @@ class SearchLossDataProvider
         }
     }
 
+    private function getPlainEnglishMeaning(string $term, string $fixType): string
+    {
+        return sprintf(
+            'Customers are telling you they want "%s", but Magento search may not be connecting that demand to a useful product, category, synonym, or search result.',
+            trim($term)
+        );
+    }
+
+    private function getMagentoFixSteps(string $term, string $fixType): array
+    {
+        $cleanTerm = trim($term);
+
+        switch ($fixType) {
+            case 'Brand or product terms are missing':
+                return [
+                    'Search Magento products for the term and close variations.',
+                    'Review brand, manufacturer, model, product family, and product-type attributes.',
+                    'Add missing terms to searchable product attributes where accurate.',
+                    'Improve product names or descriptions where useful.',
+                    'Reindex Magento search data and test the search again.',
+                ];
+
+            case 'Customers use different wording':
+                return [
+                    'Check whether the term maps to an existing product or category.',
+                    'Identify the catalogue wording currently used for the same product.',
+                    'Add safe synonyms or searchable terms where the meaning is the same.',
+                    'Update product or category copy only where the wording is accurate.',
+                    'Reindex Magento search data and test the search again.',
+                ];
+
+            case 'SKU or part number is not matching':
+                return [
+                    'Check whether the term matches a SKU, manufacturer part number, alternate part number, old part number, replacement part, or barcode.',
+                    'Review whether those identifiers are stored on the correct product.',
+                    'Make sure SKU and part-number fields are searchable where appropriate.',
+                    'Add alternate identifiers to product data if they are valid.',
+                    'Reindex Magento search data and test exact-match search behaviour.',
+                ];
+
+            case 'Product or category may be missing':
+                return [
+                    'Check whether the store already sells this product, an equivalent product, or a close substitute.',
+                    'If products exist, improve product naming, searchable attributes, category assignment, and discoverability.',
+                    'If a category exists, consider routing customers to the best category or landing page.',
+                    'If the store does not sell it, treat repeated searches as catalogue demand.',
+                    'Reindex Magento search data and test the search again.',
+                ];
+
+            case 'Spelling or format variant':
+                return [
+                    'Search for the intended product using corrected spelling or formatting.',
+                    'Identify common typo, punctuation, spacing, abbreviation, or singular/plural variants.',
+                    'Add safe variants to searchable product data or synonyms where the intent is clear.',
+                    'Avoid broad matching when the term looks SKU-like.',
+                    'Reindex Magento search data and test the search again.',
+                ];
+
+            case 'Fitment or use case is unclear':
+                return [
+                    'Review whether the term refers to compatibility, fitment, size, model, material, system, or application.',
+                    'Check whether relevant products include structured fitment or use-case data.',
+                    'Add compatibility, dimensions, material, or application data where useful.',
+                    'Improve product copy so customers can connect the use case to the right product.',
+                    'Reindex Magento search data and test the search again.',
+                ];
+
+            case 'Search term is too broad or unclear':
+                return [
+                    'Review the current search journey manually.',
+                    'Avoid forcing a narrow synonym or redirect unless the intent is clear.',
+                    'Improve categories, filters, and suggested search refinements.',
+                    'Use merchandising or ranking rules to improve the most useful results.',
+                    'Retest the storefront search experience.',
+                ];
+
+            case 'Results are weak or badly ranked':
+                return [
+                    'Search the term manually and review the top results.',
+                    'Check whether the right products exist but are buried below weaker results.',
+                    'Review searchable attributes and search weights.',
+                    'Reduce noisy attributes if they pollute search results.',
+                    'Reindex Magento search data and test again.',
+                ];
+
+            default:
+                return [
+                    'Search the term manually in Magento and on the storefront.',
+                    'Review matching products, categories, synonyms, redirects, and searchable attributes.',
+                    'Check whether this is a catalogue gap or a findability issue.',
+                    'Assign a clearer fix type after review.',
+                    'Reindex Magento search data and test again.',
+                ];
+        }
+    }
+
     private function getOpportunityScore(int $count, float $lostRevenue): string
     {
         if ($count >= 10 || $lostRevenue >= 300) {
@@ -364,6 +460,8 @@ class SearchLossDataProvider
                 'opportunityScore' => $this->getOpportunityScore($count, $lostRevenue),
                 'fixType' => $fixType,
                 'suggestedFix' => $this->getSuggestedFix($termText, $fixType),
+                'plainEnglishMeaning' => $this->getPlainEnglishMeaning($termText, $fixType),
+                'magentoFixSteps' => $this->getMagentoFixSteps($termText, $fixType),
                 'confidence' => $this->getConfidence($count, $fixType),
                 'trend' => 'up'
             ];
