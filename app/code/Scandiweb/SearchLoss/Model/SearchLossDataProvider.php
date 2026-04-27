@@ -110,6 +110,147 @@ class SearchLossDataProvider
         );
     }
 
+    private function getIdentityAttributeCodes(): array
+    {
+        return [
+            'manufacturer',
+            'brand',
+            'mpn',
+            'part_number',
+            'partnumber',
+            'product_code',
+            'model',
+            'oem',
+            'oem_number',
+            'supplier',
+            'vendor',
+        ];
+    }
+
+    private function getExistingIdentityAttributes(): array
+    {
+        $connection = $this->resource->getConnection();
+
+        $attributeTable = $this->resource->getTableName('eav_attribute');
+        $catalogAttributeTable = $this->resource->getTableName('catalog_eav_attribute');
+        $entityTypeTable = $this->resource->getTableName('eav_entity_type');
+
+        return $connection->fetchAll(
+            $connection->select()
+                ->from(['ea' => $attributeTable], [
+                    'attribute_id',
+                    'attribute_code',
+                    'frontend_label',
+                    'backend_type',
+                ])
+                ->join(
+                    ['cea' => $catalogAttributeTable],
+                    'cea.attribute_id = ea.attribute_id',
+                    ['is_searchable', 'is_filterable']
+                )
+                ->join(
+                    ['eet' => $entityTypeTable],
+                    'eet.entity_type_id = ea.entity_type_id',
+                    []
+                )
+                ->where('eet.entity_type_code = ?', 'catalog_product')
+                ->where('ea.attribute_code IN (?)', $this->getIdentityAttributeCodes())
+                ->order('ea.attribute_code ASC')
+        );
+    }
+
+    private function getIdentityAttributeSignals(string $term, array $tokens): array
+    {
+        $connection = $this->resource->getConnection();
+
+        $productVarcharTable = $this->resource->getTableName('catalog_product_entity_varchar');
+        $productTextTable = $this->resource->getTableName('catalog_product_entity_text');
+        $productIntTable = $this->resource->getTableName('catalog_product_entity_int');
+        $optionValueTable = $this->resource->getTableName('eav_attribute_option_value');
+
+        $identityAttributes = $this->getExistingIdentityAttributes();
+
+        if (empty($identityAttributes)) {
+            return [
+                'identityAttributesFound' => 0,
+                'searchableIdentityAttributes' => 0,
+                'identityAttributeMatches' => 0,
+                'matchedIdentityAttributes' => 'None',
+            ];
+        }
+
+        $matchedAttributeCodes = [];
+        $matchCount = 0;
+        $searchableCount = 0;
+
+        $valuesToCheck = array_values(array_unique(array_filter(array_merge([trim($term)], $tokens))));
+
+        foreach ($identityAttributes as $attribute) {
+            $attributeId = (int)$attribute['attribute_id'];
+            $attributeCode = (string)$attribute['attribute_code'];
+            $backendType = (string)$attribute['backend_type'];
+
+            if ((int)$attribute['is_searchable'] === 1) {
+                $searchableCount++;
+            }
+
+            $conditions = [];
+            foreach ($valuesToCheck as $value) {
+                $conditions[] = $connection->quoteInto('value LIKE ?', '%' . $value . '%');
+            }
+
+            if (empty($conditions)) {
+                continue;
+            }
+
+            $attributeMatches = 0;
+
+            if (in_array($backendType, ['varchar', 'text'], true)) {
+                $valueTable = $backendType === 'text' ? $productTextTable : $productVarcharTable;
+
+                $attributeMatches = (int)$connection->fetchOne(
+                    $connection->select()
+                        ->from($valueTable, ['total' => 'COUNT(DISTINCT entity_id)'])
+                        ->where('attribute_id = ?', $attributeId)
+                        ->where('(' . implode(' OR ', $conditions) . ')')
+                );
+            }
+
+            if ($backendType === 'int') {
+                $optionMatches = (int)$connection->fetchOne(
+                    $connection->select()
+                        ->from(['cpei' => $productIntTable], ['total' => 'COUNT(DISTINCT cpei.entity_id)'])
+                        ->join(
+                            ['eaov' => $optionValueTable],
+                            'eaov.option_id = cpei.value',
+                            []
+                        )
+                        ->where('cpei.attribute_id = ?', $attributeId)
+                        ->where('(' . implode(' OR ', array_map(
+                            fn($condition) => str_replace('value', 'eaov.value', $condition),
+                            $conditions
+                        )) . ')')
+                );
+
+                $attributeMatches = $optionMatches;
+            }
+
+            if ($attributeMatches > 0) {
+                $matchCount += $attributeMatches;
+                $matchedAttributeCodes[] = $attributeCode;
+            }
+        }
+
+        $matchedAttributeCodes = array_values(array_unique($matchedAttributeCodes));
+
+        return [
+            'identityAttributesFound' => count($identityAttributes),
+            'searchableIdentityAttributes' => $searchableCount,
+            'identityAttributeMatches' => $matchCount,
+            'matchedIdentityAttributes' => empty($matchedAttributeCodes) ? 'None' : implode(', ', $matchedAttributeCodes),
+        ];
+    }
+
     private function getProductVisibilitySignals(string $term, array $tokens): array
     {
         $connection = $this->resource->getConnection();
@@ -382,6 +523,7 @@ class SearchLossDataProvider
         $signals = $this->getCatalogueSignals($term);
         $tokens = $this->getSearchTokens($term);
         $visibilitySignals = $this->getProductVisibilitySignals($term, $tokens);
+        $identitySignals = $this->getIdentityAttributeSignals($term, $tokens);
 
         $connection = $this->resource->getConnection();
         $productVarcharTable = $this->resource->getTableName('catalog_product_entity_varchar');
@@ -478,6 +620,10 @@ class SearchLossDataProvider
             ['label' => 'Not assigned to category', 'value' => (string)$visibilitySignals['notAssignedToCategory']],
             ['label' => 'In stock product matches', 'value' => (string)$visibilitySignals['inStockProducts']],
             ['label' => 'Out of stock product matches', 'value' => (string)$visibilitySignals['outOfStockProducts']],
+            ['label' => 'Identity attributes found', 'value' => (string)$identitySignals['identityAttributesFound']],
+            ['label' => 'Searchable identity attributes', 'value' => (string)$identitySignals['searchableIdentityAttributes']],
+            ['label' => 'Identity attribute matches', 'value' => (string)$identitySignals['identityAttributeMatches']],
+            ['label' => 'Matched identity attributes', 'value' => $identitySignals['matchedIdentityAttributes']],
             ['label' => 'Full-phrase category matches', 'value' => (string)$signals['categoryNameMatches']],
             ['label' => 'Keyword category matches', 'value' => (string)$relatedCategoryMatches],
             ['label' => 'Catalog signal', 'value' => $status],
@@ -491,6 +637,7 @@ class SearchLossDataProvider
         $tokens = $this->getSearchTokens($term);
         $catalogueSignals = $this->getCatalogueSignals($term);
         $visibilitySignals = $this->getProductVisibilitySignals($term, $tokens);
+        $identitySignals = $this->getIdentityAttributeSignals($term, $tokens);
 
         if ((int)$visibilitySignals['relatedProductsChecked'] > 0) {
             if ((int)$visibilitySignals['disabledProducts'] > 0 && (int)$visibilitySignals['enabledProducts'] <= 0) {
@@ -518,6 +665,10 @@ class SearchLossDataProvider
             }
 
             return 'Product exists but is not showing';
+        }
+
+        if ((int)$identitySignals['identityAttributeMatches'] > 0) {
+            return 'Brand or product terms are missing';
         }
 
         if ($catalogueSignals['hasSkuMatch']) {
