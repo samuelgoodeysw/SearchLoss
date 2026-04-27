@@ -1444,6 +1444,58 @@ class SearchLossDataProvider
         return $rows;
     }
 
+    public function getAllFailedSearchReportTerms(string $period = 'all'): array
+    {
+        $connection = $this->resource->getConnection();
+
+        $select = $connection->select()
+            ->from('search_query', ['query_text', 'num_results', 'popularity', 'updated_at'])
+            ->where('num_results = 0')
+            ->order('popularity DESC');
+
+        $this->applyDateFilter($select, $period);
+
+        $terms = array_values(array_filter(
+            $connection->fetchAll($select),
+            function ($term) {
+                return !$this->isNoiseSearchTerm((string)$term['query_text']);
+            }
+        ));
+
+        $aov = $this->getAverageOrderValue();
+        $conversionRate = $this->getConversionRate($period);
+
+        foreach ($terms as &$term) {
+            $termText = (string)$term['query_text'];
+            $count = (int)$term['popularity'];
+            $estimatedDemandValue = round((float)$count * $aov * $conversionRate, 2);
+            $fixType = $this->getFixType($termText);
+
+            $term['lost_revenue'] = $estimatedDemandValue;
+            $term['report_row'] = [
+                'term' => $termText,
+                'count' => $count,
+                'estimatedDemandValue' => $estimatedDemandValue,
+                'priority' => $this->getOpportunityScore($count, $estimatedDemandValue),
+                'issueType' => $fixType,
+                'fixEffortBucket' => $this->getFixEffortBucket($fixType),
+                'confidence' => $this->getConfidence($count, $fixType),
+                'suggestedAction' => $this->getShortSuggestedAction($termText, $fixType),
+                'fullRecommendation' => $this->getSuggestedFix($termText, $fixType),
+                'magentoFixSteps' => implode(' | ', $this->getMagentoFixSteps($termText, $fixType)),
+                'lastSearched' => (string)($term['updated_at'] ?? ''),
+            ];
+        }
+
+        usort($terms, function ($a, $b) {
+            return $b['lost_revenue'] <=> $a['lost_revenue'];
+        });
+
+        return array_map(function ($term) {
+            return $term['report_row'];
+        }, $terms);
+    }
+
     public function getSummary(string $period = 'all'): array
     {
         $failed = $this->getFailedSearchTerms($period);
