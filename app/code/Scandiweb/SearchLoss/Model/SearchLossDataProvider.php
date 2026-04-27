@@ -461,18 +461,48 @@ class SearchLossDataProvider
     private function getFixType(string $term): string
     {
         $normalized = strtolower(trim($term));
+        $tokens = $this->getSearchTokens($term);
         $catalogueSignals = $this->getCatalogueSignals($term);
+        $visibilitySignals = $this->getProductVisibilitySignals($term, $tokens);
+
+        if ((int)$visibilitySignals['relatedProductsChecked'] > 0) {
+            if ((int)$visibilitySignals['disabledProducts'] > 0 && (int)$visibilitySignals['enabledProducts'] <= 0) {
+                return 'Product exists but is disabled';
+            }
+
+            if ((int)$visibilitySignals['notAssignedToWebsite'] > 0 && (int)$visibilitySignals['assignedToWebsite'] <= 0) {
+                return 'Product exists but is not assigned to website';
+            }
+
+            if ((int)$visibilitySignals['notVisibleInSearch'] > 0 && (int)$visibilitySignals['visibleInSearch'] <= 0) {
+                return 'Product exists but is not visible in search';
+            }
+
+            if ((int)$visibilitySignals['notAssignedToCategory'] > 0 && (int)$visibilitySignals['assignedToCategory'] <= 0) {
+                return 'Product exists but is not assigned to category';
+            }
+
+            if ((int)$visibilitySignals['visibleInSearch'] > 0) {
+                return 'Product exists but search is not matching it';
+            }
+
+            return 'Product exists but is not showing';
+        }
 
         if ($catalogueSignals['hasSkuMatch']) {
-            return 'Product exists but is not showing';
+            return 'SKU or part number is not matching';
+        }
+
+        if ($catalogueSignals['hasProductNameMatch'] || $catalogueSignals['hasCategoryNameMatch']) {
+            return 'Product exists but search is not matching it';
         }
 
         if (preg_match('/[a-z]*\d+[a-z\d\-\.]*/i', $term)) {
             return 'SKU or part number is not matching';
         }
 
-        if ($catalogueSignals['hasProductNameMatch'] || $catalogueSignals['hasCategoryNameMatch']) {
-            return 'Product exists but is not showing';
+        if (preg_match('/nano\s+lea\.?f|lea\.f|sprng|suspention|bushng|galvani[sz]ed/i', $normalized)) {
+            return 'Spelling or format variant';
         }
 
         if (preg_match('/hendrickson|dexter|al-ko|lippert|bpw|meritor|febi|saf/i', $normalized)) {
@@ -483,11 +513,11 @@ class SearchLossDataProvider
             return 'Customers use different wording';
         }
 
-        if (preg_match('/nano\s+lea\.?f|lea\.f|sprng|suspention|bushng|galvani[sz]ed/i', $normalized)) {
-            return 'Spelling or format variant';
+        if (preg_match('/\b(2016|2017|2018|2019|2020|2021|2022|2023|2024|2025|2026)\b/i', $normalized)) {
+            return 'Fitment or use case is unclear';
         }
 
-        if (preg_match('/\b(axle|spring|suspension|brake|hub|bushing|bolt|nut|seal|kit|shackle|equalizer)\b/i', $normalized)) {
+        if (preg_match('/\b(axle|spring|suspension|brake|hub|bushing|bolt|nut|seal|kit|shackle|equalizer|bearing|plate)\b/i', $normalized)) {
             return 'Product or category may be missing';
         }
 
@@ -499,7 +529,7 @@ class SearchLossDataProvider
             return 'Search term is too broad or unclear';
         }
 
-        return 'Results are weak or badly ranked';
+        return 'Needs manual review';
     }
 
     private function getSuggestedFix(string $term, string $fixType): string
@@ -508,6 +538,36 @@ class SearchLossDataProvider
         $cleanTerm = trim($term);
 
         switch ($fixType) {
+            case 'Product exists but search is not matching it':
+                return sprintf(
+                    'Magento appears to have related products for "%s", and they may already be enabled and visible. Review search indexing, searchable attributes, synonyms, and customer wording because the issue looks like matching rather than missing catalogue coverage.',
+                    $cleanTerm
+                );
+
+            case 'Product exists but is disabled':
+                return sprintf(
+                    'Related products were found for "%s", but they appear to be disabled. Review whether these products should be enabled, replaced, redirected, or excluded from search demand reporting.',
+                    $cleanTerm
+                );
+
+            case 'Product exists but is not visible in search':
+                return sprintf(
+                    'Related products were found for "%s", but they do not appear to be visible in search. Review product visibility settings, searchable attributes, indexing, and storefront search behaviour.',
+                    $cleanTerm
+                );
+
+            case 'Product exists but is not assigned to website':
+                return sprintf(
+                    'Related products were found for "%s", but they do not appear to be assigned to the current Magento website. Review website assignment, store view availability, and indexing.',
+                    $cleanTerm
+                );
+
+            case 'Product exists but is not assigned to category':
+                return sprintf(
+                    'Related products were found for "%s", but they do not appear to be assigned to a category. Review category assignment, product routing, search visibility, and whether customers need a better landing path.',
+                    $cleanTerm
+                );
+
             case 'Brand or product terms are missing':
                 return sprintf(
                     'Check whether matching products have the right brand, manufacturer, product family, model, and product-type data for "%s". If products exist, add the missing terms to searchable attributes and improve product naming or copy where useful.',
@@ -567,6 +627,21 @@ class SearchLossDataProvider
     private function getShortSuggestedAction(string $term, string $fixType): string
     {
         switch ($fixType) {
+            case 'Product exists but search is not matching it':
+                return 'Review indexing, searchable attributes, synonyms, and search matching.';
+
+            case 'Product exists but is disabled':
+                return 'Review whether matching disabled products should be enabled or redirected.';
+
+            case 'Product exists but is not visible in search':
+                return 'Review product visibility settings and search indexing.';
+
+            case 'Product exists but is not assigned to website':
+                return 'Assign matching products to the correct Magento website if appropriate.';
+
+            case 'Product exists but is not assigned to category':
+                return 'Assign matching products to useful categories or landing paths.';
+
             case 'Product exists but is not showing':
                 return 'Review search indexing, searchable attributes, and result visibility.';
 
@@ -720,9 +795,61 @@ class SearchLossDataProvider
 
     private function getMagentoFixSteps(string $term, string $fixType): array
     {
-        $cleanTerm = trim($term);
-
         switch ($fixType) {
+            case 'Product exists but search is not matching it':
+                return [
+                    'Search the term manually in Magento admin and on the storefront.',
+                    'Confirm which related products should appear for this search.',
+                    'Review product names, searchable attributes, synonyms, and search weights.',
+                    'Check whether Magento search indexing is current.',
+                    'Reindex Magento search and test the customer search again.',
+                ];
+
+            case 'Product exists but is disabled':
+                return [
+                    'Review the matching disabled products in Magento.',
+                    'Confirm whether they should be sellable, replaced, redirected, or hidden.',
+                    'If they should be sellable, enable them and review stock, website, category, and visibility settings.',
+                    'If they should not be sellable, route customers to the closest active alternative where appropriate.',
+                    'Reindex Magento search and test the customer search again.',
+                ];
+
+            case 'Product exists but is not visible in search':
+                return [
+                    'Open the matching products in Magento admin.',
+                    'Review product visibility and confirm they are visible in search or catalog/search where appropriate.',
+                    'Check searchable attributes, product status, stock, and website assignment.',
+                    'Reindex Magento search data.',
+                    'Test the customer search again on the storefront.',
+                ];
+
+            case 'Product exists but is not assigned to website':
+                return [
+                    'Open the matching products in Magento admin.',
+                    'Check whether they are assigned to the correct website and store view.',
+                    'Confirm status, visibility, stock, and category assignment.',
+                    'Assign products to the correct website if they should be available there.',
+                    'Reindex Magento search and test the customer search again.',
+                ];
+
+            case 'Product exists but is not assigned to category':
+                return [
+                    'Open the matching products in Magento admin.',
+                    'Check whether they are assigned to a useful customer-facing category.',
+                    'If needed, assign them to the best category or create a clearer landing path.',
+                    'Review product naming and searchable attributes.',
+                    'Reindex Magento search and test the customer search again.',
+                ];
+
+            case 'Product exists but is not showing':
+                return [
+                    'Search the term manually in Magento admin and on the storefront.',
+                    'Review matching product status, visibility, website assignment, category assignment, and stock.',
+                    'Check searchable attributes, synonyms, redirects, and indexing.',
+                    'Confirm the product should appear for this customer search.',
+                    'Reindex Magento search and test again.',
+                ];
+
             case 'Brand or product terms are missing':
                 return [
                     'Search Magento products for the term and close variations.',
@@ -761,38 +888,38 @@ class SearchLossDataProvider
 
             case 'Spelling or format variant':
                 return [
-                    'Search for the intended product using corrected spelling or formatting.',
-                    'Identify common typo, punctuation, spacing, abbreviation, or singular/plural variants.',
-                    'Add safe variants to searchable product data or synonyms where the intent is clear.',
-                    'Avoid broad matching when the term looks SKU-like.',
+                    'Check whether the term is a typo, abbreviation, spacing issue, punctuation variant, or singular/plural variant.',
+                    'Confirm the intended product or category before adding a synonym.',
+                    'Add safe variants only where the customer intent is clear.',
+                    'Avoid broad matches for SKU-like or part-number-like terms.',
                     'Reindex Magento search and test the customer search again.',
                 ];
 
             case 'Fitment or use case is unclear':
                 return [
-                    'Review whether the term refers to compatibility, fitment, size, model, material, system, or application.',
-                    'Check whether relevant products include structured fitment or use-case data.',
-                    'Add compatibility, dimensions, material, or application data where useful.',
-                    'Improve product copy so customers can connect the use case to the right product.',
+                    'Check whether the term describes a compatibility need, model, size, material, system, or use case.',
+                    'Review whether product data clearly explains that fitment or use case.',
+                    'Add structured fitment, compatibility, or application data where useful.',
+                    'Improve product/category copy so customers can connect the need to the right item.',
                     'Reindex Magento search and test the customer search again.',
                 ];
 
             case 'Search term is too broad or unclear':
                 return [
-                    'Review the current search journey manually.',
-                    'Avoid forcing a narrow synonym or redirect unless the intent is clear.',
-                    'Improve categories, filters, and suggested search refinements.',
-                    'Use merchandising or ranking rules to improve the most useful results.',
-                    'Retest the storefront search experience.',
+                    'Search the term manually and review the range of possible meanings.',
+                    'Avoid forcing a narrow synonym or redirect unless intent is clear.',
+                    'Improve categories, filters, suggested searches, and result ordering.',
+                    'Use landing pages or category routing only where they genuinely help customers narrow intent.',
+                    'Monitor repeated searches to see whether clearer patterns emerge.',
                 ];
 
             case 'Results are weak or badly ranked':
                 return [
-                    'Search the term manually and review the top results.',
-                    'Check whether the right products exist but are buried below weaker results.',
-                    'Review searchable attributes and search weights.',
-                    'Reduce noisy attributes if they pollute search results.',
-                    'Reindex Magento search data and test again.',
+                    'Search the term manually on the storefront.',
+                    'Review whether the best products appear near the top.',
+                    'Adjust searchable attributes, search weights, product data, ranking rules, or merchandising boosts.',
+                    'Check whether irrelevant products are overpowering better matches.',
+                    'Reindex Magento search and test the customer search again.',
                 ];
 
             default:
