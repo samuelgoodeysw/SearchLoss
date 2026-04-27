@@ -1022,7 +1022,7 @@ class SearchLossDataProvider
             ->from('search_query', ['query_text', 'num_results', 'popularity', 'updated_at'])
             ->where('num_results = 0')
             ->order('popularity DESC')
-            ->limit(20);
+            ->limit(100);
 
         $this->applyDateFilter($select, $period);
 
@@ -1044,7 +1044,7 @@ class SearchLossDataProvider
             return $b['lost_revenue'] <=> $a['lost_revenue'];
         });
 
-        return $terms;
+        return array_slice($terms, 0, 20);
     }
 
     public function getWeakSearchTerms(string $period = 'all'): array
