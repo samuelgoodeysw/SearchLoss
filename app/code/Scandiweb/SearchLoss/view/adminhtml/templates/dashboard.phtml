@@ -55,6 +55,10 @@ function catalogEvidenceTooltip($label) {
         'Disabled product matches' => 'Related products that are disabled in Magento. Customers may be searching for items that exist in the catalogue but are not currently sellable or visible.',
         'Visible in search' => 'Related products set to appear in search or catalogue/search. If this is above zero but search failed, review indexing, search configuration, and searchable attributes.',
         'Not visible in search' => 'Related products that are not set to appear in search. Review these if they should help customers find this term.',
+        'Assigned to website' => 'Related products that are assigned to at least one Magento website. If this is zero, the products may exist but not be available on the current storefront.',
+        'Not assigned to website' => 'Related products that do not appear to be assigned to a Magento website. Review website assignment if these products should be sellable or searchable.',
+        'Assigned to category' => 'Related products that are assigned to at least one category. Category assignment can help customers browse to the right products even when search needs improvement.',
+        'Not assigned to category' => 'Related products that do not appear to be assigned to a category. Review category assignment if customers should be able to find these products through navigation.',
         'Full-phrase category matches' => 'Categories whose name contains the full search phrase. If this is above zero, the search may need to route customers to that category.',
         'Keyword category matches' => 'Categories whose name contains one or more key words from the search. This can show a related category path for the failed search.',
         'Catalog signal' => 'A quick summary of whether Magento appears to have matching or related catalog data for this failed search.',
@@ -384,6 +388,59 @@ function catalogEvidenceTooltip($label) {
     display: none;
 }
 
+
+.searchloss-evidence-note {
+    margin: 8px 0 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+
+.searchloss-evidence-summary {
+    margin: 0 0 10px;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.searchloss-evidence-details {
+    margin-top: 8px;
+}
+
+.searchloss-evidence-details summary {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    color: #1557d6;
+    font-size: 13px;
+    font-weight: 800;
+    list-style: none;
+}
+
+.searchloss-evidence-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.searchloss-evidence-details summary::after {
+    content: "↓";
+    margin-left: 6px;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.searchloss-evidence-details[open] summary {
+    margin-bottom: 10px;
+}
+
+.searchloss-evidence-details[open] summary::after {
+    content: "↑";
+}
+
 </style>
 
 <div class="searchloss-page">
@@ -595,11 +652,21 @@ function catalogEvidenceTooltip($label) {
                                             <p class="searchloss-detail-text">
                                                 <?= $block->escapeHtml($plainEnglishMeaning) ?>
                                             </p>
+                                            <p class="searchloss-evidence-note">
+                                                Evidence-led diagnosis. Review before making catalogue or search changes.
+                                            </p>
                                         </div>
 
                                         <div class="searchloss-detail-card">
                                             <div class="searchloss-detail-title">Catalog signal</div>
-                                            <?php if (empty($catalogEvidence)): ?>
+                                            <p class="searchloss-evidence-summary">
+                                                The diagnosis is the summary. Expand this section to see the Magento evidence behind it.
+                                            </p>
+
+                                            <details class="searchloss-evidence-details">
+                                                <summary>Show evidence behind diagnosis</summary>
+
+<?php if (empty($catalogEvidence)): ?>
                                                 <p class="searchloss-detail-text">No catalog evidence was available for this term.</p>
                                             <?php else: ?>
                                                 <div class="searchloss-evidence-list">
@@ -614,6 +681,7 @@ function catalogEvidenceTooltip($label) {
                                                     <?php endforeach; ?>
                                                 </div>
                                             <?php endif; ?>
+                                            </details>
                                         </div>
 <div class="searchloss-detail-card">
                                             <div class="searchloss-detail-title">Recommended fix</div>
@@ -974,5 +1042,50 @@ document.addEventListener('DOMContentLoaded', function () {
     sortRows('revenue', 'desc');
     applyFilters();
 });
+</script>
+
+
+<script>
+(function () {
+    var storageKey = 'searchloss_period_scroll_y';
+
+    function restoreScrollPosition() {
+        var savedY = sessionStorage.getItem(storageKey);
+
+        if (savedY === null) {
+            return;
+        }
+
+        sessionStorage.removeItem(storageKey);
+
+        var y = parseInt(savedY, 10);
+
+        if (!isNaN(y)) {
+            window.requestAnimationFrame(function () {
+                window.scrollTo(0, y);
+            });
+        }
+    }
+
+    function rememberScrollBeforePeriodChange() {
+        var links = document.querySelectorAll('.searchloss-periods a');
+
+        links.forEach(function (link) {
+            link.addEventListener('click', function () {
+                sessionStorage.setItem(storageKey, String(window.scrollY || window.pageYOffset || 0));
+            });
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            rememberScrollBeforePeriodChange();
+            restoreScrollPosition();
+        });
+    } else {
+        rememberScrollBeforePeriodChange();
+        restoreScrollPosition();
+    }
+})();
 </script>
 
