@@ -110,6 +110,84 @@ class SearchLossDataProvider
         );
     }
 
+    private function getSearchableAttributeSignals(): array
+    {
+        $connection = $this->resource->getConnection();
+
+        $attributeTable = $this->resource->getTableName('eav_attribute');
+        $catalogAttributeTable = $this->resource->getTableName('catalog_eav_attribute');
+        $entityTypeTable = $this->resource->getTableName('eav_entity_type');
+
+        $coreAttributeCodes = [
+            'name',
+            'sku',
+            'description',
+            'short_description',
+        ];
+
+        $identityAttributeCodes = $this->getIdentityAttributeCodes();
+
+        $attributeRows = $connection->fetchAll(
+            $connection->select()
+                ->from(['ea' => $attributeTable], [
+                    'attribute_code',
+                    'frontend_label',
+                ])
+                ->join(
+                    ['cea' => $catalogAttributeTable],
+                    'cea.attribute_id = ea.attribute_id',
+                    ['is_searchable', 'is_filterable']
+                )
+                ->join(
+                    ['eet' => $entityTypeTable],
+                    'eet.entity_type_id = ea.entity_type_id',
+                    []
+                )
+                ->where('eet.entity_type_code = ?', 'catalog_product')
+                ->where('ea.attribute_code IN (?)', array_values(array_unique(array_merge($coreAttributeCodes, $identityAttributeCodes))))
+                ->order('ea.attribute_code ASC')
+        );
+
+        $foundCoreAttributes = [];
+        $searchableCoreAttributes = [];
+        $foundIdentityAttributes = [];
+        $searchableIdentityAttributes = [];
+
+        foreach ($attributeRows as $attribute) {
+            $code = (string)$attribute['attribute_code'];
+            $isSearchable = (int)$attribute['is_searchable'] === 1;
+
+            if (in_array($code, $coreAttributeCodes, true)) {
+                $foundCoreAttributes[] = $code;
+
+                if ($isSearchable) {
+                    $searchableCoreAttributes[] = $code;
+                }
+            }
+
+            if (in_array($code, $identityAttributeCodes, true)) {
+                $foundIdentityAttributes[] = $code;
+
+                if ($isSearchable) {
+                    $searchableIdentityAttributes[] = $code;
+                }
+            }
+        }
+
+        return [
+            'coreAttributesFound' => empty($foundCoreAttributes) ? 'None' : implode(', ', $foundCoreAttributes),
+            'searchableCoreAttributes' => empty($searchableCoreAttributes) ? 'None' : implode(', ', $searchableCoreAttributes),
+            'identityAttributesFoundList' => empty($foundIdentityAttributes) ? 'None' : implode(', ', $foundIdentityAttributes),
+            'searchableIdentityAttributesList' => empty($searchableIdentityAttributes) ? 'None' : implode(', ', $searchableIdentityAttributes),
+            'coreAttributeSearchCoverage' => count($foundCoreAttributes) > 0
+                ? count($searchableCoreAttributes) . ' of ' . count($foundCoreAttributes)
+                : '0 of 0',
+            'identityAttributeSearchCoverage' => count($foundIdentityAttributes) > 0
+                ? count($searchableIdentityAttributes) . ' of ' . count($foundIdentityAttributes)
+                : '0 of 0',
+        ];
+    }
+
     private function getIdentityAttributeCodes(): array
     {
         return [
@@ -524,6 +602,7 @@ class SearchLossDataProvider
         $tokens = $this->getSearchTokens($term);
         $visibilitySignals = $this->getProductVisibilitySignals($term, $tokens);
         $identitySignals = $this->getIdentityAttributeSignals($term, $tokens);
+        $searchableAttributeSignals = $this->getSearchableAttributeSignals();
 
         $connection = $this->resource->getConnection();
         $productVarcharTable = $this->resource->getTableName('catalog_product_entity_varchar');
@@ -592,13 +671,13 @@ class SearchLossDataProvider
 
         if ((int)$signals['skuMatches'] > 0) {
             $status = 'SKU signal found';
-            $suggestion = 'A SKU-like match exists, but search still failed. Review SKU search behavior, indexing, and searchable attributes.';
+            $suggestion = 'A SKU-like match exists, but search still failed. Review SKU search behavior, indexing, and whether identifier fields are searchable.';
         } elseif ((int)$signals['productNameMatches'] > 0 || (int)$signals['categoryNameMatches'] > 0) {
             $status = 'Exact catalog wording found';
-            $suggestion = 'Magento has matching catalog wording, but search still failed. Review indexing, searchable attributes, synonyms, and result ranking.';
+            $suggestion = 'Magento has matching catalog wording, but search still failed. Review indexing, searchable attributes, synonyms, and whether the matched fields are included in search.';
         } elseif ($relatedProductMatches > 0 || $relatedCategoryMatches > 0) {
             $status = 'Related catalog wording found';
-            $suggestion = 'Magento has related catalog wording, but the customer search still failed. This usually means product naming, searchable attributes, synonyms, or search ranking need review.';
+            $suggestion = 'Magento has related catalog wording, but the customer search still failed. This usually means product naming, searchable attribute coverage, synonyms, or search ranking need review.';
         } else {
             $status = 'No obvious catalog signal found';
             $suggestion = 'No clear catalog signal was found. This may be true missing demand, or the product may exist under wording customers do not use.';
@@ -620,6 +699,12 @@ class SearchLossDataProvider
             ['label' => 'Not assigned to category', 'value' => (string)$visibilitySignals['notAssignedToCategory']],
             ['label' => 'In stock product matches', 'value' => (string)$visibilitySignals['inStockProducts']],
             ['label' => 'Out of stock product matches', 'value' => (string)$visibilitySignals['outOfStockProducts']],
+            ['label' => 'Core product attributes found', 'value' => $searchableAttributeSignals['coreAttributesFound']],
+            ['label' => 'Searchable core product attributes', 'value' => $searchableAttributeSignals['searchableCoreAttributes']],
+            ['label' => 'Core attribute search coverage', 'value' => $searchableAttributeSignals['coreAttributeSearchCoverage']],
+            ['label' => 'Identity attributes found list', 'value' => $searchableAttributeSignals['identityAttributesFoundList']],
+            ['label' => 'Searchable identity attributes list', 'value' => $searchableAttributeSignals['searchableIdentityAttributesList']],
+            ['label' => 'Identity attribute search coverage', 'value' => $searchableAttributeSignals['identityAttributeSearchCoverage']],
             ['label' => 'Identity attributes found', 'value' => (string)$identitySignals['identityAttributesFound']],
             ['label' => 'Searchable identity attributes', 'value' => (string)$identitySignals['searchableIdentityAttributes']],
             ['label' => 'Identity attribute matches', 'value' => (string)$identitySignals['identityAttributeMatches']],
@@ -979,6 +1064,41 @@ class SearchLossDataProvider
         }
     }
 
+
+    private function getFixEffortBucket(string $fixType): string
+    {
+        switch ($fixType) {
+            case 'Product exists but is disabled':
+            case 'Product exists but is not visible in search':
+            case 'Product exists but is not assigned to website':
+            case 'Product exists but is not assigned to category':
+            case 'Product exists but may be out of stock':
+                return 'Quick admin/config fix';
+
+            case 'Product exists but search is not matching it':
+            case 'Product exists but is not showing':
+                return 'Attribute/search configuration fix';
+
+            case 'SKU or part number is not matching':
+            case 'Brand or product terms are missing':
+            case 'Fitment or use case is unclear':
+                return 'Catalogue data fix';
+
+            case 'Customers use different wording':
+            case 'Spelling or format variant':
+                return 'Synonym/search term fix';
+
+            case 'Search term is too broad or unclear':
+            case 'Results are weak or badly ranked':
+                return 'Search relevance/ranking review';
+
+            case 'Product or category may be missing':
+                return 'Catalogue coverage review';
+
+            default:
+                return 'Manual review';
+        }
+    }
 
     private function getMagentoFixSteps(string $term, string $fixType): array
     {
@@ -1369,6 +1489,7 @@ class SearchLossDataProvider
                 'lostRevenue' => $lostRevenue,
                 'opportunityScore' => $this->getOpportunityScore($count, $lostRevenue),
                 'fixType' => $fixType,
+                'fixEffortBucket' => $this->getFixEffortBucket($fixType),
                 'suggestedFix' => $this->getSuggestedFix($termText, $fixType),
                 'shortSuggestedAction' => $this->getShortSuggestedAction($termText, $fixType),
                 'plainEnglishMeaning' => $this->getPlainEnglishMeaning($termText, $fixType),
