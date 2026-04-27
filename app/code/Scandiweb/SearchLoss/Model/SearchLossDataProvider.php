@@ -963,6 +963,57 @@ class SearchLossDataProvider
         return 'Low';
     }
 
+    private function isNoiseSearchTerm(string $term): bool
+    {
+        $cleanTerm = strtolower(trim($term));
+
+        if ($cleanTerm === '') {
+            return true;
+        }
+
+        if (strlen($cleanTerm) < 3) {
+            return true;
+        }
+
+        if (strlen($cleanTerm) > 120) {
+            return true;
+        }
+
+        if (preg_match('/https?:\/\/|www\.|\.com|\.net|\.org|\.ru|\.cn|\.xyz/i', $cleanTerm)) {
+            return true;
+        }
+
+        if (preg_match('/[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}/i', $cleanTerm)) {
+            return true;
+        }
+
+        if (preg_match('/<script|<\/script|select\s+.*from|union\s+select|drop\s+table|insert\s+into|javascript:/i', $cleanTerm)) {
+            return true;
+        }
+
+        if (preg_match('/\b(test|testing|asdf|qwerty|lorem|ipsum|null|undefined)\b/i', $cleanTerm)) {
+            return true;
+        }
+
+        $lettersAndNumbers = preg_replace('/[^a-z0-9]/i', '', $cleanTerm);
+
+        if (strlen($lettersAndNumbers) < 3) {
+            return true;
+        }
+
+        $symbolCount = strlen(preg_replace('/[a-z0-9\s]/i', '', $cleanTerm));
+
+        if ($symbolCount > 0 && $symbolCount >= strlen($cleanTerm) / 2) {
+            return true;
+        }
+
+        if (preg_match('/(.)\1{5,}/', $cleanTerm)) {
+            return true;
+        }
+
+        return false;
+    }
+
     public function getFailedSearchTerms(string $period = 'all'): array
     {
         $connection = $this->resource->getConnection();
@@ -975,7 +1026,12 @@ class SearchLossDataProvider
 
         $this->applyDateFilter($select, $period);
 
-        $terms = $connection->fetchAll($select);
+        $terms = array_values(array_filter(
+            $connection->fetchAll($select),
+            function ($term) {
+                return !$this->isNoiseSearchTerm((string)$term['query_text']);
+            }
+        ));
 
         $aov = $this->getAverageOrderValue();
         $conversionRate = $this->getConversionRate($period);
