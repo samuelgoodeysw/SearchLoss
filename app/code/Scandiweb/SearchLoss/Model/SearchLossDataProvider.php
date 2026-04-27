@@ -683,28 +683,20 @@ class SearchLossDataProvider
             return 'SKU or part number is not matching';
         }
 
-        if (preg_match('/nano\s+lea\.?f|lea\.f|sprng|suspention|bushng|galvani[sz]ed/i', $normalized)) {
+        if (preg_match('/\b[a-z]+[\-\.]?[a-z]*\d+[a-z0-9\-\.]*\b/i', $term) || preg_match('/\b\d+[a-z]+[a-z0-9\-\.]*\b/i', $term)) {
+            return 'SKU or part number is not matching';
+        }
+
+        if (preg_match('/[^a-z0-9\s\-\.]/i', $term) || preg_match('/\b[a-z]+\.[a-z]+\b/i', $normalized)) {
             return 'Spelling or format variant';
         }
 
-        if (preg_match('/hendrickson|dexter|al-ko|lippert|bpw|meritor|febi|saf/i', $normalized)) {
-            return 'Brand or product terms are missing';
-        }
-
-        if (preg_match('/air\s*bag|airbag|air\s*spring|air\s*suspension/i', $normalized)) {
-            return 'Customers use different wording';
-        }
-
-        if (preg_match('/\b(2016|2017|2018|2019|2020|2021|2022|2023|2024|2025|2026)\b/i', $normalized)) {
+        if (preg_match('/\b(19|20)\d{2}\b/', $normalized) || str_word_count($normalized) >= 3) {
             return 'Fitment or use case is unclear';
         }
 
-        if (preg_match('/\b(axle|spring|suspension|brake|hub|bushing|bolt|nut|seal|kit|shackle|equalizer|bearing|plate)\b/i', $normalized)) {
+        if (str_word_count($normalized) >= 2) {
             return 'Product or category may be missing';
-        }
-
-        if (str_word_count($normalized) >= 3) {
-            return 'Fitment or use case is unclear';
         }
 
         if (str_word_count($normalized) <= 1) {
