@@ -119,6 +119,7 @@ class SearchLossDataProvider
         $productIntTable = $this->resource->getTableName('catalog_product_entity_int');
         $productWebsiteTable = $this->resource->getTableName('catalog_product_website');
         $productCategoryTable = $this->resource->getTableName('catalog_category_product');
+        $stockStatusTable = $this->resource->getTableName('cataloginventory_stock_status');
 
         $nameAttributeId = $this->getProductAttributeId('name');
         $statusAttributeId = $this->getProductAttributeId('status');
@@ -135,6 +136,8 @@ class SearchLossDataProvider
                 'notAssignedToWebsite' => 0,
                 'assignedToCategory' => 0,
                 'notAssignedToCategory' => 0,
+                'inStockProducts' => 0,
+                'outOfStockProducts' => 0,
             ];
         }
 
@@ -175,6 +178,8 @@ class SearchLossDataProvider
                 'notAssignedToWebsite' => 0,
                 'assignedToCategory' => 0,
                 'notAssignedToCategory' => 0,
+                'inStockProducts' => 0,
+                'outOfStockProducts' => 0,
             ];
         }
 
@@ -182,6 +187,8 @@ class SearchLossDataProvider
         $disabledProducts = 0;
         $visibleInSearch = 0;
         $notVisibleInSearch = 0;
+        $inStockProducts = 0;
+        $outOfStockProducts = 0;
 
         if ($statusAttributeId > 0) {
             $enabledProducts = (int)$connection->fetchOne(
@@ -232,6 +239,22 @@ class SearchLossDataProvider
                 ->where('product_id IN (?)', $productIds)
         );
 
+        if ($connection->isTableExists($stockStatusTable)) {
+            $inStockProducts = (int)$connection->fetchOne(
+                $connection->select()
+                    ->from($stockStatusTable, ['total' => 'COUNT(DISTINCT product_id)'])
+                    ->where('product_id IN (?)', $productIds)
+                    ->where('stock_status = ?', 1)
+            );
+
+            $outOfStockProducts = (int)$connection->fetchOne(
+                $connection->select()
+                    ->from($stockStatusTable, ['total' => 'COUNT(DISTINCT product_id)'])
+                    ->where('product_id IN (?)', $productIds)
+                    ->where('stock_status = ?', 0)
+            );
+        }
+
         $notAssignedToWebsite = max(0, count($productIds) - $assignedToWebsite);
         $notAssignedToCategory = max(0, count($productIds) - $assignedToCategory);
 
@@ -245,6 +268,8 @@ class SearchLossDataProvider
             'notAssignedToWebsite' => $notAssignedToWebsite,
             'assignedToCategory' => $assignedToCategory,
             'notAssignedToCategory' => $notAssignedToCategory,
+            'inStockProducts' => $inStockProducts,
+            'outOfStockProducts' => $outOfStockProducts,
         ];
     }
 
@@ -451,6 +476,8 @@ class SearchLossDataProvider
             ['label' => 'Not assigned to website', 'value' => (string)$visibilitySignals['notAssignedToWebsite']],
             ['label' => 'Assigned to category', 'value' => (string)$visibilitySignals['assignedToCategory']],
             ['label' => 'Not assigned to category', 'value' => (string)$visibilitySignals['notAssignedToCategory']],
+            ['label' => 'In stock product matches', 'value' => (string)$visibilitySignals['inStockProducts']],
+            ['label' => 'Out of stock product matches', 'value' => (string)$visibilitySignals['outOfStockProducts']],
             ['label' => 'Full-phrase category matches', 'value' => (string)$signals['categoryNameMatches']],
             ['label' => 'Keyword category matches', 'value' => (string)$relatedCategoryMatches],
             ['label' => 'Catalog signal', 'value' => $status],
@@ -480,6 +507,10 @@ class SearchLossDataProvider
 
             if ((int)$visibilitySignals['notAssignedToCategory'] > 0 && (int)$visibilitySignals['assignedToCategory'] <= 0) {
                 return 'Product exists but is not assigned to category';
+            }
+
+            if ((int)$visibilitySignals['outOfStockProducts'] > 0 && (int)$visibilitySignals['inStockProducts'] <= 0) {
+                return 'Product exists but may be out of stock';
             }
 
             if ((int)$visibilitySignals['visibleInSearch'] > 0) {
@@ -565,6 +596,12 @@ class SearchLossDataProvider
             case 'Product exists but is not assigned to category':
                 return sprintf(
                     'Related products were found for "%s", but they do not appear to be assigned to a category. Review category assignment, product routing, search visibility, and whether customers need a better landing path.',
+                    $cleanTerm
+                );
+
+            case 'Product exists but may be out of stock':
+                return sprintf(
+                    'Related products were found for "%s", but they appear to be out of stock. Review stock status, salable quantity, backorder rules, and whether customers should be routed to an available alternative.',
                     $cleanTerm
                 );
 
@@ -709,6 +746,13 @@ class SearchLossDataProvider
                 );
             }
 
+            if ((int)$visibilitySignals['outOfStockProducts'] > 0 && (int)$visibilitySignals['inStockProducts'] <= 0) {
+                return sprintf(
+                    'Related products were found for "%s", but they appear to be out of stock. Customers may be searching for products the catalogue knows about, but cannot currently buy.',
+                    $cleanTerm
+                );
+            }
+
             if ((int)$visibilitySignals['notAssignedToWebsite'] > 0 || (int)$visibilitySignals['notAssignedToCategory'] > 0) {
                 return sprintf(
                     'Related products were found for "%s", but some may not be assigned to a website or category. Review website assignment, category assignment, visibility, and indexing before treating this as missing catalogue demand.',
@@ -839,6 +883,15 @@ class SearchLossDataProvider
                     'If needed, assign them to the best category or create a clearer landing path.',
                     'Review product naming and searchable attributes.',
                     'Reindex Magento search and test the customer search again.',
+                ];
+
+            case 'Product exists but may be out of stock':
+                return [
+                    'Open the matching products in Magento admin.',
+                    'Review stock status, salable quantity, source inventory, and backorder settings.',
+                    'If products should be available, correct stock/salable quantity and reindex inventory/search data.',
+                    'If products are genuinely unavailable, route customers to the closest in-stock alternative where appropriate.',
+                    'Test the customer search again on the storefront.',
                 ];
 
             case 'Product exists but is not showing':
