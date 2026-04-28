@@ -198,6 +198,27 @@ function catalogEvidenceTooltip($label) {
 .searchloss-money-action-title { margin-top:0;  color:#0f172a; font-size:13px; font-weight:850; line-height:1.35; margin-bottom:8px; }
 .searchloss-money-action-value { color:#020617; font-size:22px; font-weight:900; letter-spacing:-.03em; margin-bottom:4px; }
 .searchloss-money-action-meta { color:#64748b; font-size:12px; line-height:1.45; }
+
+.searchloss-money-action-title { min-height:36px; }
+.searchloss-money-action .searchloss-tooltip-label {
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+    width:100%;
+}
+.searchloss-money-action .searchloss-tooltip,
+.searchloss-money-action .searchloss-tooltip-icon,
+.searchloss-money-action .searchloss-tooltip-trigger {
+    margin-left:auto;
+    flex:0 0 auto;
+    align-self:flex-start;
+}
+.searchloss-money-action .searchloss-tooltip-bubble {
+    left:auto;
+    right:0;
+    top:calc(100% + 8px);
+}
 .searchloss-money-actions,
 .searchloss-money-actions[open],
 .searchloss-money-actions summary,
@@ -874,7 +895,7 @@ function catalogEvidenceTooltip($label) {
             </summary>
             <div class="searchloss-money-actions-grid">
                 <?php foreach ($topMoneyActions as $index => $action): ?>
-                    <div class="searchloss-money-action" data-money-effort="<?= $block->escapeHtmlAttr(strtolower((string)$action['label'])) ?>">
+                    <div class="searchloss-money-action" data-money-effort="<?= $block->escapeHtmlAttr(strtolower((string)$action['label'])) ?>" data-money-effort-label="<?= $block->escapeHtmlAttr((string)$action['label']) ?>">
 <div class="searchloss-money-action-title">
                             <?= tooltipLabel((string)$action['label'], fixEffortTooltip((string)$action['label'])) ?>
                         </div>
@@ -1110,6 +1131,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var currentSortKey = 'revenue';
     var currentSortDirection = 'desc';
     var currentMoneyActionEffort = 'all';
+    var currentMoneyActionEffortLabel = '';
 
     function getMainRows() {
         return Array.prototype.slice.call(document.querySelectorAll('tr.searchloss-main-row'));
@@ -1280,8 +1302,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 activeFilter.classList.remove('is-visible');
                 activeFilter.innerHTML = '';
             } else {
-                var activeCard = document.querySelector('.searchloss-money-action--active');
-                var activeLabel = activeCard ? activeCard.getAttribute('data-money-effort-label') : currentMoneyActionEffort;
+                var activeLabel = currentMoneyActionEffortLabel || currentMoneyActionEffort;
 
                 activeFilter.classList.add('is-visible');
                 activeFilter.innerHTML = 'Showing work type: ' + activeLabel + ' <button type="button" id="searchloss-clear-active-worktype-filter">Clear</button>';
@@ -1312,6 +1333,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         currentMoneyActionEffort = 'all';
+        currentMoneyActionEffortLabel = '';
         updateMoneyActionCards();
 
         getMainRows().forEach(function (row) {
@@ -1381,7 +1403,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (moneyActionCard) {
             var selectedEffort = String(moneyActionCard.getAttribute('data-money-effort') || 'all');
-            currentMoneyActionEffort = currentMoneyActionEffort === selectedEffort ? 'all' : selectedEffort;
+            var selectedLabel = String(moneyActionCard.getAttribute('data-money-effort-label') || selectedEffort);
+
+            if (currentMoneyActionEffort === selectedEffort) {
+                currentMoneyActionEffort = 'all';
+                currentMoneyActionEffortLabel = '';
+            } else {
+                currentMoneyActionEffort = selectedEffort;
+                currentMoneyActionEffortLabel = selectedLabel;
+            }
+
             updateMoneyActionCards();
             applyFilters();
 
@@ -1397,6 +1428,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (clearMoneyActionFilter) {
             currentMoneyActionEffort = 'all';
+            currentMoneyActionEffortLabel = '';
             updateMoneyActionCards();
             applyFilters();
             return;
