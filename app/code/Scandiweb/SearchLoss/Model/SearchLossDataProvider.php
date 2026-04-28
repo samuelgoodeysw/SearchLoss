@@ -110,6 +110,225 @@ class SearchLossDataProvider
         );
     }
 
+    private function getSearchableAttributeSignals(): array
+    {
+        $connection = $this->resource->getConnection();
+
+        $attributeTable = $this->resource->getTableName('eav_attribute');
+        $catalogAttributeTable = $this->resource->getTableName('catalog_eav_attribute');
+        $entityTypeTable = $this->resource->getTableName('eav_entity_type');
+
+        $coreAttributeCodes = [
+            'name',
+            'sku',
+            'description',
+            'short_description',
+        ];
+
+        $identityAttributeCodes = $this->getIdentityAttributeCodes();
+
+        $attributeRows = $connection->fetchAll(
+            $connection->select()
+                ->from(['ea' => $attributeTable], [
+                    'attribute_code',
+                    'frontend_label',
+                ])
+                ->join(
+                    ['cea' => $catalogAttributeTable],
+                    'cea.attribute_id = ea.attribute_id',
+                    ['is_searchable', 'is_filterable']
+                )
+                ->join(
+                    ['eet' => $entityTypeTable],
+                    'eet.entity_type_id = ea.entity_type_id',
+                    []
+                )
+                ->where('eet.entity_type_code = ?', 'catalog_product')
+                ->where('ea.attribute_code IN (?)', array_values(array_unique(array_merge($coreAttributeCodes, $identityAttributeCodes))))
+                ->order('ea.attribute_code ASC')
+        );
+
+        $foundCoreAttributes = [];
+        $searchableCoreAttributes = [];
+        $foundIdentityAttributes = [];
+        $searchableIdentityAttributes = [];
+
+        foreach ($attributeRows as $attribute) {
+            $code = (string)$attribute['attribute_code'];
+            $isSearchable = (int)$attribute['is_searchable'] === 1;
+
+            if (in_array($code, $coreAttributeCodes, true)) {
+                $foundCoreAttributes[] = $code;
+
+                if ($isSearchable) {
+                    $searchableCoreAttributes[] = $code;
+                }
+            }
+
+            if (in_array($code, $identityAttributeCodes, true)) {
+                $foundIdentityAttributes[] = $code;
+
+                if ($isSearchable) {
+                    $searchableIdentityAttributes[] = $code;
+                }
+            }
+        }
+
+        return [
+            'coreAttributesFound' => empty($foundCoreAttributes) ? 'None' : implode(', ', $foundCoreAttributes),
+            'searchableCoreAttributes' => empty($searchableCoreAttributes) ? 'None' : implode(', ', $searchableCoreAttributes),
+            'identityAttributesFoundList' => empty($foundIdentityAttributes) ? 'None' : implode(', ', $foundIdentityAttributes),
+            'searchableIdentityAttributesList' => empty($searchableIdentityAttributes) ? 'None' : implode(', ', $searchableIdentityAttributes),
+            'coreAttributeSearchCoverage' => count($foundCoreAttributes) > 0
+                ? count($searchableCoreAttributes) . ' of ' . count($foundCoreAttributes)
+                : '0 of 0',
+            'identityAttributeSearchCoverage' => count($foundIdentityAttributes) > 0
+                ? count($searchableIdentityAttributes) . ' of ' . count($foundIdentityAttributes)
+                : '0 of 0',
+        ];
+    }
+
+    private function getIdentityAttributeCodes(): array
+    {
+        return [
+            'manufacturer',
+            'brand',
+            'mpn',
+            'part_number',
+            'partnumber',
+            'product_code',
+            'model',
+            'oem',
+            'oem_number',
+            'supplier',
+            'vendor',
+        ];
+    }
+
+    private function getExistingIdentityAttributes(): array
+    {
+        $connection = $this->resource->getConnection();
+
+        $attributeTable = $this->resource->getTableName('eav_attribute');
+        $catalogAttributeTable = $this->resource->getTableName('catalog_eav_attribute');
+        $entityTypeTable = $this->resource->getTableName('eav_entity_type');
+
+        return $connection->fetchAll(
+            $connection->select()
+                ->from(['ea' => $attributeTable], [
+                    'attribute_id',
+                    'attribute_code',
+                    'frontend_label',
+                    'backend_type',
+                ])
+                ->join(
+                    ['cea' => $catalogAttributeTable],
+                    'cea.attribute_id = ea.attribute_id',
+                    ['is_searchable', 'is_filterable']
+                )
+                ->join(
+                    ['eet' => $entityTypeTable],
+                    'eet.entity_type_id = ea.entity_type_id',
+                    []
+                )
+                ->where('eet.entity_type_code = ?', 'catalog_product')
+                ->where('ea.attribute_code IN (?)', $this->getIdentityAttributeCodes())
+                ->order('ea.attribute_code ASC')
+        );
+    }
+
+    private function getIdentityAttributeSignals(string $term, array $tokens): array
+    {
+        $connection = $this->resource->getConnection();
+
+        $productVarcharTable = $this->resource->getTableName('catalog_product_entity_varchar');
+        $productTextTable = $this->resource->getTableName('catalog_product_entity_text');
+        $productIntTable = $this->resource->getTableName('catalog_product_entity_int');
+        $optionValueTable = $this->resource->getTableName('eav_attribute_option_value');
+
+        $identityAttributes = $this->getExistingIdentityAttributes();
+
+        if (empty($identityAttributes)) {
+            return [
+                'identityAttributesFound' => 0,
+                'searchableIdentityAttributes' => 0,
+                'identityAttributeMatches' => 0,
+                'matchedIdentityAttributes' => 'None',
+            ];
+        }
+
+        $matchedAttributeCodes = [];
+        $matchCount = 0;
+        $searchableCount = 0;
+
+        $valuesToCheck = array_values(array_unique(array_filter(array_merge([trim($term)], $tokens))));
+
+        foreach ($identityAttributes as $attribute) {
+            $attributeId = (int)$attribute['attribute_id'];
+            $attributeCode = (string)$attribute['attribute_code'];
+            $backendType = (string)$attribute['backend_type'];
+
+            if ((int)$attribute['is_searchable'] === 1) {
+                $searchableCount++;
+            }
+
+            $conditions = [];
+            foreach ($valuesToCheck as $value) {
+                $conditions[] = $connection->quoteInto('value LIKE ?', '%' . $value . '%');
+            }
+
+            if (empty($conditions)) {
+                continue;
+            }
+
+            $attributeMatches = 0;
+
+            if (in_array($backendType, ['varchar', 'text'], true)) {
+                $valueTable = $backendType === 'text' ? $productTextTable : $productVarcharTable;
+
+                $attributeMatches = (int)$connection->fetchOne(
+                    $connection->select()
+                        ->from($valueTable, ['total' => 'COUNT(DISTINCT entity_id)'])
+                        ->where('attribute_id = ?', $attributeId)
+                        ->where('(' . implode(' OR ', $conditions) . ')')
+                );
+            }
+
+            if ($backendType === 'int') {
+                $optionMatches = (int)$connection->fetchOne(
+                    $connection->select()
+                        ->from(['cpei' => $productIntTable], ['total' => 'COUNT(DISTINCT cpei.entity_id)'])
+                        ->join(
+                            ['eaov' => $optionValueTable],
+                            'eaov.option_id = cpei.value',
+                            []
+                        )
+                        ->where('cpei.attribute_id = ?', $attributeId)
+                        ->where('(' . implode(' OR ', array_map(
+                            fn($condition) => str_replace('value', 'eaov.value', $condition),
+                            $conditions
+                        )) . ')')
+                );
+
+                $attributeMatches = $optionMatches;
+            }
+
+            if ($attributeMatches > 0) {
+                $matchCount += $attributeMatches;
+                $matchedAttributeCodes[] = $attributeCode;
+            }
+        }
+
+        $matchedAttributeCodes = array_values(array_unique($matchedAttributeCodes));
+
+        return [
+            'identityAttributesFound' => count($identityAttributes),
+            'searchableIdentityAttributes' => $searchableCount,
+            'identityAttributeMatches' => $matchCount,
+            'matchedIdentityAttributes' => empty($matchedAttributeCodes) ? 'None' : implode(', ', $matchedAttributeCodes),
+        ];
+    }
+
     private function getProductVisibilitySignals(string $term, array $tokens): array
     {
         $connection = $this->resource->getConnection();
@@ -119,6 +338,7 @@ class SearchLossDataProvider
         $productIntTable = $this->resource->getTableName('catalog_product_entity_int');
         $productWebsiteTable = $this->resource->getTableName('catalog_product_website');
         $productCategoryTable = $this->resource->getTableName('catalog_category_product');
+        $stockStatusTable = $this->resource->getTableName('cataloginventory_stock_status');
 
         $nameAttributeId = $this->getProductAttributeId('name');
         $statusAttributeId = $this->getProductAttributeId('status');
@@ -135,6 +355,8 @@ class SearchLossDataProvider
                 'notAssignedToWebsite' => 0,
                 'assignedToCategory' => 0,
                 'notAssignedToCategory' => 0,
+                'inStockProducts' => 0,
+                'outOfStockProducts' => 0,
             ];
         }
 
@@ -175,6 +397,8 @@ class SearchLossDataProvider
                 'notAssignedToWebsite' => 0,
                 'assignedToCategory' => 0,
                 'notAssignedToCategory' => 0,
+                'inStockProducts' => 0,
+                'outOfStockProducts' => 0,
             ];
         }
 
@@ -182,6 +406,8 @@ class SearchLossDataProvider
         $disabledProducts = 0;
         $visibleInSearch = 0;
         $notVisibleInSearch = 0;
+        $inStockProducts = 0;
+        $outOfStockProducts = 0;
 
         if ($statusAttributeId > 0) {
             $enabledProducts = (int)$connection->fetchOne(
@@ -232,6 +458,22 @@ class SearchLossDataProvider
                 ->where('product_id IN (?)', $productIds)
         );
 
+        if ($connection->isTableExists($stockStatusTable)) {
+            $inStockProducts = (int)$connection->fetchOne(
+                $connection->select()
+                    ->from($stockStatusTable, ['total' => 'COUNT(DISTINCT product_id)'])
+                    ->where('product_id IN (?)', $productIds)
+                    ->where('stock_status = ?', 1)
+            );
+
+            $outOfStockProducts = (int)$connection->fetchOne(
+                $connection->select()
+                    ->from($stockStatusTable, ['total' => 'COUNT(DISTINCT product_id)'])
+                    ->where('product_id IN (?)', $productIds)
+                    ->where('stock_status = ?', 0)
+            );
+        }
+
         $notAssignedToWebsite = max(0, count($productIds) - $assignedToWebsite);
         $notAssignedToCategory = max(0, count($productIds) - $assignedToCategory);
 
@@ -245,6 +487,8 @@ class SearchLossDataProvider
             'notAssignedToWebsite' => $notAssignedToWebsite,
             'assignedToCategory' => $assignedToCategory,
             'notAssignedToCategory' => $notAssignedToCategory,
+            'inStockProducts' => $inStockProducts,
+            'outOfStockProducts' => $outOfStockProducts,
         ];
     }
 
@@ -357,6 +601,8 @@ class SearchLossDataProvider
         $signals = $this->getCatalogueSignals($term);
         $tokens = $this->getSearchTokens($term);
         $visibilitySignals = $this->getProductVisibilitySignals($term, $tokens);
+        $identitySignals = $this->getIdentityAttributeSignals($term, $tokens);
+        $searchableAttributeSignals = $this->getSearchableAttributeSignals();
 
         $connection = $this->resource->getConnection();
         $productVarcharTable = $this->resource->getTableName('catalog_product_entity_varchar');
@@ -425,13 +671,13 @@ class SearchLossDataProvider
 
         if ((int)$signals['skuMatches'] > 0) {
             $status = 'SKU signal found';
-            $suggestion = 'A SKU-like match exists, but search still failed. Review SKU search behavior, indexing, and searchable attributes.';
+            $suggestion = 'A SKU-like match exists, but search still failed. Review SKU search behavior, indexing, and whether identifier fields are searchable.';
         } elseif ((int)$signals['productNameMatches'] > 0 || (int)$signals['categoryNameMatches'] > 0) {
             $status = 'Exact catalog wording found';
-            $suggestion = 'Magento has matching catalog wording, but search still failed. Review indexing, searchable attributes, synonyms, and result ranking.';
+            $suggestion = 'Magento has matching catalog wording, but search still failed. Review indexing, searchable attributes, synonyms, and whether the matched fields are included in search.';
         } elseif ($relatedProductMatches > 0 || $relatedCategoryMatches > 0) {
             $status = 'Related catalog wording found';
-            $suggestion = 'Magento has related catalog wording, but the customer search still failed. This usually means product naming, searchable attributes, synonyms, or search ranking need review.';
+            $suggestion = 'Magento has related catalog wording, but the customer search still failed. This usually means product naming, searchable attribute coverage, synonyms, or search ranking need review.';
         } else {
             $status = 'No obvious catalog signal found';
             $suggestion = 'No clear catalog signal was found. This may be true missing demand, or the product may exist under wording customers do not use.';
@@ -451,6 +697,18 @@ class SearchLossDataProvider
             ['label' => 'Not assigned to website', 'value' => (string)$visibilitySignals['notAssignedToWebsite']],
             ['label' => 'Assigned to category', 'value' => (string)$visibilitySignals['assignedToCategory']],
             ['label' => 'Not assigned to category', 'value' => (string)$visibilitySignals['notAssignedToCategory']],
+            ['label' => 'In stock product matches', 'value' => (string)$visibilitySignals['inStockProducts']],
+            ['label' => 'Out of stock product matches', 'value' => (string)$visibilitySignals['outOfStockProducts']],
+            ['label' => 'Core product attributes found', 'value' => $searchableAttributeSignals['coreAttributesFound']],
+            ['label' => 'Searchable core product attributes', 'value' => $searchableAttributeSignals['searchableCoreAttributes']],
+            ['label' => 'Core attribute search coverage', 'value' => $searchableAttributeSignals['coreAttributeSearchCoverage']],
+            ['label' => 'Identity attributes found list', 'value' => $searchableAttributeSignals['identityAttributesFoundList']],
+            ['label' => 'Searchable identity attributes list', 'value' => $searchableAttributeSignals['searchableIdentityAttributesList']],
+            ['label' => 'Identity attribute search coverage', 'value' => $searchableAttributeSignals['identityAttributeSearchCoverage']],
+            ['label' => 'Identity attributes found', 'value' => (string)$identitySignals['identityAttributesFound']],
+            ['label' => 'Searchable identity attributes', 'value' => (string)$identitySignals['searchableIdentityAttributes']],
+            ['label' => 'Identity attribute matches', 'value' => (string)$identitySignals['identityAttributeMatches']],
+            ['label' => 'Matched identity attributes', 'value' => $identitySignals['matchedIdentityAttributes']],
             ['label' => 'Full-phrase category matches', 'value' => (string)$signals['categoryNameMatches']],
             ['label' => 'Keyword category matches', 'value' => (string)$relatedCategoryMatches],
             ['label' => 'Catalog signal', 'value' => $status],
@@ -464,6 +722,7 @@ class SearchLossDataProvider
         $tokens = $this->getSearchTokens($term);
         $catalogueSignals = $this->getCatalogueSignals($term);
         $visibilitySignals = $this->getProductVisibilitySignals($term, $tokens);
+        $identitySignals = $this->getIdentityAttributeSignals($term, $tokens);
 
         if ((int)$visibilitySignals['relatedProductsChecked'] > 0) {
             if ((int)$visibilitySignals['disabledProducts'] > 0 && (int)$visibilitySignals['enabledProducts'] <= 0) {
@@ -482,11 +741,19 @@ class SearchLossDataProvider
                 return 'Product exists but is not assigned to category';
             }
 
+            if ((int)$visibilitySignals['outOfStockProducts'] > 0 && (int)$visibilitySignals['inStockProducts'] <= 0) {
+                return 'Product exists but may be out of stock';
+            }
+
             if ((int)$visibilitySignals['visibleInSearch'] > 0) {
                 return 'Product exists but search is not matching it';
             }
 
             return 'Product exists but is not showing';
+        }
+
+        if ((int)$identitySignals['identityAttributeMatches'] > 0) {
+            return 'Brand or product terms are missing';
         }
 
         if ($catalogueSignals['hasSkuMatch']) {
@@ -501,28 +768,20 @@ class SearchLossDataProvider
             return 'SKU or part number is not matching';
         }
 
-        if (preg_match('/nano\s+lea\.?f|lea\.f|sprng|suspention|bushng|galvani[sz]ed/i', $normalized)) {
+        if (preg_match('/\b[a-z]+[\-\.]?[a-z]*\d+[a-z0-9\-\.]*\b/i', $term) || preg_match('/\b\d+[a-z]+[a-z0-9\-\.]*\b/i', $term)) {
+            return 'SKU or part number is not matching';
+        }
+
+        if (preg_match('/[^a-z0-9\s\-\.]/i', $term) || preg_match('/\b[a-z]+\.[a-z]+\b/i', $normalized)) {
             return 'Spelling or format variant';
         }
 
-        if (preg_match('/hendrickson|dexter|al-ko|lippert|bpw|meritor|febi|saf/i', $normalized)) {
-            return 'Brand or product terms are missing';
-        }
-
-        if (preg_match('/air\s*bag|airbag|air\s*spring|air\s*suspension/i', $normalized)) {
-            return 'Customers use different wording';
-        }
-
-        if (preg_match('/\b(2016|2017|2018|2019|2020|2021|2022|2023|2024|2025|2026)\b/i', $normalized)) {
+        if (preg_match('/\b(19|20)\d{2}\b/', $normalized) || str_word_count($normalized) >= 3) {
             return 'Fitment or use case is unclear';
         }
 
-        if (preg_match('/\b(axle|spring|suspension|brake|hub|bushing|bolt|nut|seal|kit|shackle|equalizer|bearing|plate)\b/i', $normalized)) {
+        if (str_word_count($normalized) >= 2) {
             return 'Product or category may be missing';
-        }
-
-        if (str_word_count($normalized) >= 3) {
-            return 'Fitment or use case is unclear';
         }
 
         if (str_word_count($normalized) <= 1) {
@@ -565,6 +824,12 @@ class SearchLossDataProvider
             case 'Product exists but is not assigned to category':
                 return sprintf(
                     'Related products were found for "%s", but they do not appear to be assigned to a category. Review category assignment, product routing, search visibility, and whether customers need a better landing path.',
+                    $cleanTerm
+                );
+
+            case 'Product exists but may be out of stock':
+                return sprintf(
+                    'Related products were found for "%s", but they appear to be out of stock. Review stock status, salable quantity, backorder rules, and whether customers should be routed to an available alternative.',
                     $cleanTerm
                 );
 
@@ -709,6 +974,13 @@ class SearchLossDataProvider
                 );
             }
 
+            if ((int)$visibilitySignals['outOfStockProducts'] > 0 && (int)$visibilitySignals['inStockProducts'] <= 0) {
+                return sprintf(
+                    'Related products were found for "%s", but they appear to be out of stock. Customers may be searching for products the catalogue knows about, but cannot currently buy.',
+                    $cleanTerm
+                );
+            }
+
             if ((int)$visibilitySignals['notAssignedToWebsite'] > 0 || (int)$visibilitySignals['notAssignedToCategory'] > 0) {
                 return sprintf(
                     'Related products were found for "%s", but some may not be assigned to a website or category. Review website assignment, category assignment, visibility, and indexing before treating this as missing catalogue demand.',
@@ -793,6 +1065,41 @@ class SearchLossDataProvider
     }
 
 
+    private function getFixEffortBucket(string $fixType): string
+    {
+        switch ($fixType) {
+            case 'Product exists but is disabled':
+            case 'Product exists but is not visible in search':
+            case 'Product exists but is not assigned to website':
+            case 'Product exists but is not assigned to category':
+            case 'Product exists but may be out of stock':
+                return 'Quick admin/config fix';
+
+            case 'Product exists but search is not matching it':
+            case 'Product exists but is not showing':
+                return 'Attribute/search configuration fix';
+
+            case 'SKU or part number is not matching':
+            case 'Brand or product terms are missing':
+            case 'Fitment or use case is unclear':
+                return 'Catalogue data fix';
+
+            case 'Customers use different wording':
+            case 'Spelling or format variant':
+                return 'Synonym/search term fix';
+
+            case 'Search term is too broad or unclear':
+            case 'Results are weak or badly ranked':
+                return 'Search relevance/ranking review';
+
+            case 'Product or category may be missing':
+                return 'Catalogue coverage review';
+
+            default:
+                return 'Manual review';
+        }
+    }
+
     private function getMagentoFixSteps(string $term, string $fixType): array
     {
         switch ($fixType) {
@@ -839,6 +1146,15 @@ class SearchLossDataProvider
                     'If needed, assign them to the best category or create a clearer landing path.',
                     'Review product naming and searchable attributes.',
                     'Reindex Magento search and test the customer search again.',
+                ];
+
+            case 'Product exists but may be out of stock':
+                return [
+                    'Open the matching products in Magento admin.',
+                    'Review stock status, salable quantity, source inventory, and backorder settings.',
+                    'If products should be available, correct stock/salable quantity and reindex inventory/search data.',
+                    'If products are genuinely unavailable, route customers to the closest in-stock alternative where appropriate.',
+                    'Test the customer search again on the storefront.',
                 ];
 
             case 'Product exists but is not showing':
@@ -1128,6 +1444,58 @@ class SearchLossDataProvider
         return $rows;
     }
 
+    public function getAllFailedSearchReportTerms(string $period = 'all'): array
+    {
+        $connection = $this->resource->getConnection();
+
+        $select = $connection->select()
+            ->from('search_query', ['query_text', 'num_results', 'popularity', 'updated_at'])
+            ->where('num_results = 0')
+            ->order('popularity DESC');
+
+        $this->applyDateFilter($select, $period);
+
+        $terms = array_values(array_filter(
+            $connection->fetchAll($select),
+            function ($term) {
+                return !$this->isNoiseSearchTerm((string)$term['query_text']);
+            }
+        ));
+
+        $aov = $this->getAverageOrderValue();
+        $conversionRate = $this->getConversionRate($period);
+
+        foreach ($terms as &$term) {
+            $termText = (string)$term['query_text'];
+            $count = (int)$term['popularity'];
+            $estimatedDemandValue = round((float)$count * $aov * $conversionRate, 2);
+            $fixType = $this->getFixType($termText);
+
+            $term['lost_revenue'] = $estimatedDemandValue;
+            $term['report_row'] = [
+                'term' => $termText,
+                'count' => $count,
+                'estimatedDemandValue' => $estimatedDemandValue,
+                'priority' => $this->getOpportunityScore($count, $estimatedDemandValue),
+                'issueType' => $fixType,
+                'fixEffortBucket' => $this->getFixEffortBucket($fixType),
+                'confidence' => $this->getConfidence($count, $fixType),
+                'suggestedAction' => $this->getShortSuggestedAction($termText, $fixType),
+                'fullRecommendation' => $this->getSuggestedFix($termText, $fixType),
+                'magentoFixSteps' => implode(' | ', $this->getMagentoFixSteps($termText, $fixType)),
+                'lastSearched' => (string)($term['updated_at'] ?? ''),
+            ];
+        }
+
+        usort($terms, function ($a, $b) {
+            return $b['lost_revenue'] <=> $a['lost_revenue'];
+        });
+
+        return array_map(function ($term) {
+            return $term['report_row'];
+        }, $terms);
+    }
+
     public function getSummary(string $period = 'all'): array
     {
         $failed = $this->getFailedSearchTerms($period);
@@ -1173,6 +1541,7 @@ class SearchLossDataProvider
                 'lostRevenue' => $lostRevenue,
                 'opportunityScore' => $this->getOpportunityScore($count, $lostRevenue),
                 'fixType' => $fixType,
+                'fixEffortBucket' => $this->getFixEffortBucket($fixType),
                 'suggestedFix' => $this->getSuggestedFix($termText, $fixType),
                 'shortSuggestedAction' => $this->getShortSuggestedAction($termText, $fixType),
                 'plainEnglishMeaning' => $this->getPlainEnglishMeaning($termText, $fixType),

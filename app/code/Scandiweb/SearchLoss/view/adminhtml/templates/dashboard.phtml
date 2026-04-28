@@ -3,7 +3,31 @@ $summary = $block->getSummary();
 $currentPeriod = $block->getCurrentPeriod();
 $rankedTerms = $block->getRankedFailedSearchTerms();
 $topOpportunity = $rankedTerms[0] ?? null;
+$topMoneyActions = [];
 $zeroResultRate = 0;
+
+foreach ($rankedTerms as $term) {
+    $bucket = (string)($term['fixEffortBucket'] ?? 'Manual review');
+
+    if (!isset($topMoneyActions[$bucket])) {
+        $topMoneyActions[$bucket] = [
+            'label' => $bucket,
+            'terms' => 0,
+            'searches' => 0,
+            'value' => 0,
+        ];
+    }
+
+    $topMoneyActions[$bucket]['terms']++;
+    $topMoneyActions[$bucket]['searches'] += (int)($term['count'] ?? 0);
+    $topMoneyActions[$bucket]['value'] += (float)($term['lostRevenue'] ?? 0);
+}
+
+usort($topMoneyActions, function ($a, $b) {
+    return $b['value'] <=> $a['value'];
+});
+
+$topMoneyActions = array_slice($topMoneyActions, 0, 3);
 
 if (($summary['failed_searches'] ?? 0) > 0 && method_exists($block, 'getSearchData')) {
     $searchData = $block->getSearchData();
@@ -44,6 +68,20 @@ function tooltipLabel($label, $tooltip) {
         . '</span>';
 }
 
+function fixEffortTooltip($label) {
+    $tooltips = [
+        'Quick admin/config fix' => 'These are likely Magento admin setting issues, such as status, visibility, website assignment, category assignment, or stock setup. These may be faster wins because related products already appear to exist.',
+        'Attribute/search configuration fix' => 'These searches look like Magento has related products, but search is not matching them well. Review indexing, searchable attributes, search weights, synonyms, and customer wording.',
+        'Catalogue data fix' => 'These searches likely need better product data, such as SKU, part number, manufacturer, brand, model, fitment, or other searchable product information.',
+        'Synonym/search term fix' => 'These searches may use different wording, spelling, spacing, or punctuation from the catalogue. Add safe synonyms or search terms only where the intent is clear.',
+        'Search relevance/ranking review' => 'These searches may need result ordering, ranking, filters, or merchandising review rather than a simple catalogue data change.',
+        'Catalogue coverage review' => 'These searches may point to products, categories, or substitutes that are missing, poorly named, or not clearly represented in the catalogue.',
+        'Manual review' => 'These searches need human review because the current Magento evidence does not clearly point to one fix type.',
+    ];
+
+    return $tooltips[$label] ?? 'This groups failed searches by the likely type of work needed to review or fix them.';
+}
+
 function catalogEvidenceTooltip($label) {
     $tooltips = [
         'Search words checked' => 'The key words taken from the customer search and checked against Magento product and category data.',
@@ -59,6 +97,14 @@ function catalogEvidenceTooltip($label) {
         'Not assigned to website' => 'Related products that do not appear to be assigned to a Magento website. Review website assignment if these products should be sellable or searchable.',
         'Assigned to category' => 'Related products that are assigned to at least one category. Category assignment can help customers browse to the right products even when search needs improvement.',
         'Not assigned to category' => 'Related products that do not appear to be assigned to a category. Review category assignment if customers should be able to find these products through navigation.',
+        'In stock product matches' => 'Related products that are currently in stock according to Magento stock status.',
+        'Out of stock product matches' => 'Related products that are out of stock. If this is above zero, customers may be searching for products that exist but are not currently buyable.',
+        'Core product attributes found' => 'Core Magento product fields checked for search configuration, such as name, SKU, description, and short description.',
+        'Searchable core product attributes' => 'Core Magento product fields currently configured as searchable.',
+        'Core attribute search coverage' => 'How many core product fields are searchable compared with how many were found.',
+        'Identity attributes found list' => 'Product identity fields found in this Magento store, such as manufacturer, brand, MPN, model, or part number.',
+        'Searchable identity attributes list' => 'Product identity fields currently configured as searchable.',
+        'Identity attribute search coverage' => 'How many identity fields are searchable compared with how many were found.',
         'Full-phrase category matches' => 'Categories whose name contains the full search phrase. If this is above zero, the search may need to route customers to that category.',
         'Keyword category matches' => 'Categories whose name contains one or more key words from the search. This can show a related category path for the failed search.',
         'Catalog signal' => 'A quick summary of whether Magento appears to have matching or related catalog data for this failed search.',
@@ -71,13 +117,23 @@ function catalogEvidenceTooltip($label) {
 
 <style>
 .searchloss-page { color:#1f2937; }
-.searchloss-hero { background:linear-gradient(135deg,#0f172a,#172033 52%,#0f766e 145%); border-radius:20px; color:#fff; padding:26px 28px; margin-bottom:22px; box-shadow:0 18px 36px rgba(15,23,42,.18); position:relative; overflow:hidden; }
+.searchloss-hero { background:linear-gradient(135deg,#0f172a,#172033 52%,#0f766e 145%); border-radius:20px; color:#fff; padding:26px 28px; margin-bottom:18px; box-shadow:0 18px 36px rgba(15,23,42,.18); position:relative; overflow:visible; z-index:20; }
 .searchloss-hero h1 { margin:0 0 8px; color:#fff; font-size:28px; font-weight:800; letter-spacing:-.02em; }
 .searchloss-hero p { margin:0; max-width:780px; color:#dbeafe; line-height:1.55; font-size:15px; }
-.searchloss-status { display:inline-flex; margin-top:18px; padding:7px 10px; border:1px solid rgba(125,211,252,.28); background:rgba(14,165,233,.10); border-radius:999px; color:#bfdbfe; font-size:12px; font-weight:800; }
+.searchloss-hero-pills { display:flex; flex-wrap:wrap; align-items:flex-start; gap:10px; margin-top:18px; }
+.searchloss-status { display:inline-flex; margin-top:0; padding:7px 10px; border:1px solid rgba(125,211,252,.28); background:rgba(14,165,233,.10); border-radius:999px; color:#bfdbfe; font-size:12px; font-weight:800; }
 .searchloss-periods { display:flex; gap:8px; flex-wrap:wrap; margin:0; justify-content:flex-end; }
 .searchloss-periods a { display:inline-block; padding:8px 12px; border:1px solid #d1d5db; border-radius:999px; text-decoration:none; font-size:13px; font-weight:700; }
-.searchloss-grid { display:grid; grid-template-columns:repeat(5,minmax(150px,1fr)); gap:12px; margin-bottom:18px; }
+.searchloss-kpi-panel { background:#fff; border:1px solid #d7dce2; border-radius:18px; margin-bottom:18px; overflow:hidden; box-shadow:0 8px 20px rgba(15,23,42,.055); }
+.searchloss-kpi-panel summary { cursor:pointer; list-style:none; padding:16px 18px; border-bottom:1px solid transparent; background:#f8fafc; display:flex; align-items:center; justify-content:space-between; gap:14px; }
+.searchloss-kpi-panel summary::-webkit-details-marker { display:none; }
+.searchloss-kpi-panel summary::after { content:"↓"; color:#64748b; font-size:12px; font-weight:900; }
+.searchloss-kpi-panel[open] summary { border-bottom-color:#e5e7eb; }
+.searchloss-kpi-panel[open] summary::after { content:"↑"; }
+.searchloss-kpi-panel-title { min-width:0; }
+.searchloss-kpi-panel-title h2 { margin:0; color:#0f172a; font-size:16px; font-weight:850; letter-spacing:-.01em; }
+.searchloss-kpi-panel-title p { margin:6px 0 0; color:#64748b; font-size:13px; line-height:1.45; }
+.searchloss-grid { display:grid; grid-template-columns:repeat(5,minmax(150px,1fr)); gap:12px; margin:0; padding:16px 18px; }
 .searchloss-card { background:#fff; border:1px solid #d7dce2; border-radius:18px; padding:20px; box-shadow:0 10px 24px rgba(15,23,42,.055); }
 .searchloss-label { color:#64748b; font-size:11px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
 .searchloss-value { margin-top:10px; color:#020617; font-size:30px; font-weight:900; letter-spacing:-.035em; }
@@ -124,13 +180,48 @@ function catalogEvidenceTooltip($label) {
 .searchloss-top-opportunity-title { color:#1d4ed8; font-size:11px; font-weight:950; letter-spacing:.10em; text-transform:uppercase; margin-bottom:12px; }
 .searchloss-top-opportunity-term { color:#020617; font-size:22px; font-weight:900; line-height:1.25; margin:0 0 8px; letter-spacing:-.02em; }
 .searchloss-top-opportunity-copy { color:#334155; font-size:14px; line-height:1.55; margin:0; }
+.searchloss-money-actions { background:#fff; border:1px solid #d7dce2; border-radius:18px; margin-bottom:18px; overflow:hidden; box-shadow:0 8px 20px rgba(15,23,42,.055); }
+.searchloss-money-actions summary { cursor:pointer; list-style:none; padding:16px 18px; border-bottom:1px solid transparent; background:#f8fafc; display:flex; align-items:center; justify-content:space-between; gap:14px; }
+.searchloss-money-actions summary::-webkit-details-marker { display:none; }
+.searchloss-money-actions summary::after { content:"↓"; color:#64748b; font-size:12px; font-weight:900; }
+.searchloss-money-actions[open] summary { border-bottom-color:#e5e7eb; }
+.searchloss-money-actions[open] summary::after { content:"↑"; }
+.searchloss-money-actions-title { min-width:0; }
+.searchloss-money-actions-title h2 { margin:0; color:#0f172a; font-size:16px; font-weight:850; letter-spacing:-.01em; }
+.searchloss-money-actions-title p { margin:6px 0 0; color:#64748b; font-size:13px; line-height:1.45; }
+.searchloss-money-actions-grid { display:grid; grid-template-columns:repeat(3,minmax(180px,1fr)); gap:12px; padding:16px 18px; }
+.searchloss-money-action { border:1px solid #e2e8f0; border-radius:14px; padding:14px; background:#fff; cursor:pointer; transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+.searchloss-money-action:hover { border-color:#93c5fd; box-shadow:0 10px 24px rgba(37,99,235,.10); transform:translateY(-1px); }
+.searchloss-money-action--active { border-color:#2563eb; box-shadow:0 10px 24px rgba(37,99,235,.14); background:#f8fbff; }
+.searchloss-money-actions-clear { display:none; margin:0 18px 16px; color:#1557d6; font-size:12px; font-weight:800; cursor:pointer; background:transparent; border:0; padding:0; }
+.searchloss-money-actions--filtered .searchloss-money-actions-clear { display:inline-flex; }
+.searchloss-money-action-title { margin-top:0;  color:#0f172a; font-size:13px; font-weight:850; line-height:1.35; margin-bottom:8px; }
+.searchloss-money-action-value { color:#020617; font-size:22px; font-weight:900; letter-spacing:-.03em; margin-bottom:4px; }
+.searchloss-money-action-meta { color:#64748b; font-size:12px; line-height:1.45; }
+.searchloss-money-actions,
+.searchloss-money-actions[open],
+.searchloss-money-actions summary,
+.searchloss-money-actions-grid,
+.searchloss-money-action {
+    overflow: visible;
+}
+.searchloss-money-actions .searchloss-tooltip-label {
+    position: relative;
+    z-index: 90;
+}
+.searchloss-money-actions .searchloss-tooltip-bubble {
+    z-index: 120;
+    bottom: auto;
+}
+@media (max-width:1000px) { .searchloss-money-actions-grid { grid-template-columns:1fr; } }
+
 .searchloss-section { background:#fff; border:1px solid #d7dce2; border-radius:18px; margin-bottom:18px; overflow:hidden; box-shadow:0 8px 20px rgba(15,23,42,.06); }
 .searchloss-section-header { padding:16px 18px; border-bottom:1px solid #e5e7eb; background:#f8fafc; }
 .searchloss-section-head { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; }
 .searchloss-section-copy { flex:1; min-width:280px; }
 .searchloss-section-header h2 { margin:0; color:#0f172a; font-size:18px; font-weight:700; }
 .searchloss-section-header p { margin:6px 0 0; color:#64748b; font-size:13px; line-height:1.5; }
-.searchloss-filter-bar { display:grid; grid-template-columns:1.5fr .9fr 1.1fr 1.1fr auto auto; gap:10px; padding:14px 18px; border-bottom:1px solid #e5e7eb; background:#fff; align-items:end; }
+.searchloss-filter-bar { display:grid; grid-template-columns:1.5fr .9fr 1.1fr 1.1fr auto auto auto; gap:10px; padding:14px 18px; border-bottom:1px solid #e5e7eb; background:#fff; align-items:end; }
 .searchloss-filter-field label { display:block; margin-bottom:6px; color:#64748b; font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
 .searchloss-filter-field input,
 .searchloss-filter-field select { width:100%; min-height:36px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; color:#0f172a; padding:7px 10px; font-size:13px; box-sizing:border-box; }
@@ -140,7 +231,40 @@ function catalogEvidenceTooltip($label) {
 .searchloss-filter-button:hover { background:#f8fafc; border-color:#94a3b8; }
 .searchloss-export-button { min-height:36px; border:1px solid #bfdbfe; border-radius:10px; background:#eff6ff; color:#1d4ed8; padding:7px 12px; font-size:13px; font-weight:800; cursor:pointer; }
 .searchloss-export-button:hover { background:#dbeafe; border-color:#93c5fd; }
-.searchloss-filter-count { padding:0 18px 12px; color:#64748b; font-size:12px; background:#fff; }
+.searchloss-filter-count { padding:0 18px 8px; color:#64748b; font-size:12px; background:#fff; }
+.searchloss-table-hint {
+    padding:0 18px 12px;
+    color:#64748b;
+    font-size:12px;
+    background:#fff;
+}
+.searchloss-table-hint strong {
+    color:#334155;
+}
+.searchloss-active-worktype-filter {
+    display:none;
+    margin:0 18px 12px;
+    padding:10px 12px;
+    border:1px solid #bfdbfe;
+    border-radius:10px;
+    background:#eff6ff;
+    color:#1d4ed8;
+    font-size:13px;
+    font-weight:800;
+}
+.searchloss-active-worktype-filter.is-visible {
+    display:block;
+}
+.searchloss-active-worktype-filter button {
+    margin-left:8px;
+    border:0;
+    background:transparent;
+    color:#1557d6;
+    font-size:12px;
+    font-weight:900;
+    cursor:pointer;
+    text-decoration:underline;
+}
 @media (max-width:1200px) { .searchloss-filter-bar { grid-template-columns:1fr 1fr; } }
 .searchloss-table-wrap { overflow-x:auto; }
 .searchloss-table { width:100%; border-collapse:collapse; background:#fff; }
@@ -153,10 +277,27 @@ function catalogEvidenceTooltip($label) {
 .searchloss-term { color:#0f172a; font-weight:700; }
 .searchloss-money { color:#0f172a; font-weight:800; white-space:nowrap; }
 .searchloss-pill { display:inline-flex; align-items:center; border:1px solid #cbd5e1; border-radius:999px; padding:3px 8px; font-size:11px; font-weight:800; white-space:nowrap; }
-.searchloss-action { min-width:340px; color:#475569; }
+.searchloss-action { min-width:320px; color:#475569; }
+.searchloss-diagnosis { min-width:260px; max-width:360px; }
+.searchloss-diagnosis-issue { color:#475569; font-size:13px; font-weight:400; line-height:1.45; margin-bottom:7px; }
+.searchloss-meta-pills { display:flex; flex-wrap:wrap; gap:5px; }
+.searchloss-meta-pill { display:inline-flex; align-items:center; border-radius:999px; padding:3px 7px; font-size:10.5px; font-weight:700; line-height:1.2; border:1px solid #dbe2ea; background:#f8fafc; color:#475569; }
+.searchloss-meta-pill--effort { background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; }
+.searchloss-meta-pill--confidence { background:#fff; border-color:#dbe2ea; color:#64748b; }
+.searchloss-table th:nth-child(1) { width:15%; }
+.searchloss-table th:nth-child(2) { width:8%; }
+.searchloss-table th:nth-child(3) { width:11%; }
+.searchloss-table th:nth-child(4) { width:8%; }
+.searchloss-table th:nth-child(5) { width:25%; }
+.searchloss-table th:nth-child(6) { width:27%; }
+.searchloss-table th:nth-child(7) { width:6%; }
 .searchloss-empty { padding:22px; color:#64748b; font-size:13px; }
-.searchloss-details-button { border:1px solid #bfdbfe; background:#eff6ff; color:#1d4ed8; border-radius:8px; padding:5px 9px; font-size:12px; font-weight:700; cursor:pointer; }
-.searchloss-details-button:hover { background:#dbeafe; border-color:#93c5fd; }
+.searchloss-main-row { cursor:pointer; }
+.searchloss-main-row:hover td { background:#f8fafc; }
+.searchloss-main-row--open td { background:#f8fafc; }
+.searchloss-details-cue { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid #dbeafe; border-radius:999px; background:#eff6ff; color:#1d4ed8; font-size:16px; font-weight:900; line-height:1; transition:transform .15s ease, background .15s ease, border-color .15s ease; }
+.searchloss-main-row:hover .searchloss-details-cue { background:#dbeafe; border-color:#93c5fd; }
+.searchloss-main-row--open .searchloss-details-cue { transform:rotate(90deg); background:#dbeafe; border-color:#93c5fd; }
 .searchloss-detail-row { display:none; }
 .searchloss-detail-cell { background:#f8fafc; padding:18px !important; }
 .searchloss-detail-grid { display:grid; grid-template-columns:minmax(220px,.8fr) minmax(260px,1fr) minmax(320px,1.2fr); gap:14px; }
@@ -441,20 +582,260 @@ function catalogEvidenceTooltip($label) {
     content: "↑";
 }
 
+.searchloss-audit-guide {
+    margin-bottom:18px;
+    border:1px solid #d7dce2;
+    border-radius:18px;
+    background:#fff;
+    box-shadow:0 8px 20px rgba(15,23,42,.045);
+    overflow:hidden;
+}
+
+.searchloss-audit-guide summary {
+    cursor:pointer;
+    list-style:none;
+    padding:15px 18px;
+    background:#f8fafc;
+    color:#0f172a;
+    font-size:14px;
+    font-weight:850;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+}
+
+.searchloss-audit-guide summary::-webkit-details-marker {
+    display:none;
+}
+
+.searchloss-audit-guide summary::after {
+    content:"↓";
+    color:#64748b;
+    font-size:12px;
+    font-weight:900;
+}
+
+.searchloss-audit-guide[open] summary::after {
+    content:"↑";
+}
+
+.searchloss-audit-guide-body {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(180px,1fr));
+    gap:14px;
+    padding:16px 18px;
+}
+
+.searchloss-audit-guide-item h3 {
+    margin:0 0 7px;
+    color:#0f172a;
+    font-size:13px;
+    font-weight:850;
+}
+
+.searchloss-audit-guide-item p {
+    margin:0;
+    color:#475569;
+    font-size:13px;
+    line-height:1.5;
+}
+
+@media (max-width:900px) {
+    .searchloss-audit-guide-body {
+        grid-template-columns:1fr;
+    }
+}
+
+.searchloss-audit-guide--hero {
+    width:auto;
+    margin:0;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+    overflow:visible;
+    position:relative;
+}
+.searchloss-audit-guide--hero summary {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:auto;
+    padding:7px 10px;
+    border:1px solid rgba(125,211,252,.28);
+    border-radius:999px;
+    background:rgba(14,165,233,.10);
+    color:#bfdbfe;
+    font-size:12px;
+    font-weight:800;
+    line-height:1.2;
+}
+.searchloss-audit-guide--hero summary::after {
+    content:"↓";
+    margin-left:7px;
+    color:#bfdbfe;
+}
+.searchloss-audit-guide--hero[open] summary::after {
+    content:"↑";
+}
+.searchloss-audit-guide--hero .searchloss-audit-guide-body {
+    position:absolute;
+    z-index:120;
+    left:0;
+    top:calc(100% + 10px);
+    width:min(900px, calc(100vw - 120px));
+    display:grid;
+    grid-template-columns:repeat(3,minmax(160px,1fr));
+    gap:12px;
+    padding:16px;
+    border:1px solid rgba(148,163,184,.30);
+    border-radius:16px;
+    background:#ffffff;
+    box-shadow:0 18px 40px rgba(15,23,42,.22);
+}
+.searchloss-audit-guide--hero .searchloss-audit-guide-item h3 {
+    color:#0f172a;
+}
+.searchloss-audit-guide--hero .searchloss-audit-guide-item p {
+    color:#475569;
+}
+@media (max-width:900px) {
+    .searchloss-audit-guide--hero .searchloss-audit-guide-body {
+        position:absolute;
+        left:0;
+        right:auto;
+        width:min(320px, calc(100vw - 60px));
+        grid-template-columns:1fr;
+        margin-top:0;
+    }
+}
+
+.searchloss-hero {
+    padding-right: 330px;
+}
+.searchloss-hero-brand {
+    position: absolute;
+    top: 26px;
+    right: 28px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    pointer-events: none;
+}
+.searchloss-hero-logo {
+    display: block;
+    width: 240px;
+    max-width: 26vw;
+    height: auto;
+    object-fit: contain;
+}
+@media (max-width: 1000px) {
+    .searchloss-hero {
+        padding-right: 28px;
+    }
+    .searchloss-hero-brand {
+        position: static;
+        margin-top: 18px;
+        justify-content: flex-start;
+    }
+    .searchloss-hero-logo {
+        width: 190px;
+        max-width: 100%;
+    }
+}
+
+
+/* searchloss hero logo responsive overrides start */
+.searchloss-hero {
+    padding-right: 320px;
+}
+
+.searchloss-hero-brand {
+    position: absolute;
+    top: 26px;
+    right: 28px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    pointer-events: none;
+}
+
+.searchloss-hero-logo {
+    display: block;
+    width: 220px;
+    max-width: 22vw;
+    height: auto;
+}
+
+@media (max-width: 1400px) {
+    .searchloss-hero {
+        padding-right: 240px;
+    }
+
+    .searchloss-hero-logo {
+        width: 170px;
+        max-width: 18vw;
+    }
+}
+
+@media (max-width: 1180px) {
+    .searchloss-hero {
+        padding-right: 28px;
+    }
+
+    .searchloss-hero-brand {
+        display: none;
+    }
+}
+/* searchloss hero logo responsive overrides end */
+
+
 </style>
 
 <div class="searchloss-page">
     <div class="searchloss-hero">
-        <h1>Search Opportunity Dashboard</h1>
+        <h1>Search Loss Audit</h1>
         <p>
-            Find failed searches, estimate revenue at risk, and see what Magento should review first.
+            Find missed search demand, estimate demand value, and see what Magento should review first.
         </p>
-        <div class="searchloss-status">
-            Read-only Magento diagnostic. No storefront changes made.
+        <div class="searchloss-hero-pills">
+            <span class="searchloss-status">Read-only Magento diagnostic</span>
+            <details class="searchloss-audit-guide searchloss-audit-guide--hero">
+        <summary>How to use this audit</summary>
+        <div class="searchloss-audit-guide-body">
+            <div class="searchloss-audit-guide-item">
+                <h3>Start with value</h3>
+                <p>Use Est. Demand Value and failed search volume to find the searches most worth reviewing first.</p>
+            </div>
+            <div class="searchloss-audit-guide-item">
+                <h3>Check the diagnosis</h3>
+                <p>Click a row to see why it was flagged, what Magento evidence was found, and what may be blocking discovery.</p>
+            </div>
+            <div class="searchloss-audit-guide-item">
+                <h3>Fix the fastest wins</h3>
+                <p>Prioritize rows where products already exist but search, visibility, stock, attributes, or catalogue setup may be stopping customers.</p>
+            </div>
         </div>
-    </div>
+    </details>
+        </div>
+            <div class="searchloss-hero-brand">
+            <img
+                class="searchloss-hero-logo"
+                src="<?= $block->escapeUrl($block->getViewFileUrl('Scandiweb_SearchLoss::images/scandiweb-logo-red.png')) ?>"
+                alt="scandiweb"
+            >
+        </div>
+</div>
+<details class="searchloss-kpi-panel" open>
+        <summary>
+            <div class="searchloss-kpi-panel-title">
+                <h2><?= tooltipLabel('Audit snapshot', 'Headline search audit metrics for the selected period. These show the scale of missed search demand and the model used to estimate demand value.') ?></h2>
+                <p>Key search demand, value, and modelling signals for this audit period.</p>
+            </div>
+        </summary>
 
-<div class="searchloss-grid">
+        <div class="searchloss-grid">
         <div class="searchloss-card">
             <div class="searchloss-label"><?= tooltipLabel('Failed Terms', 'Unique customer search terms that returned zero results in the selected period.') ?></div>
             <div class="searchloss-value"><?= (int)$summary['failed_terms'] ?></div>
@@ -466,9 +847,9 @@ function catalogEvidenceTooltip($label) {
             <div class="searchloss-help">Failed search demand.</div>
         </div>
         <div class="searchloss-card">
-            <div class="searchloss-label"><?= tooltipLabel('Revenue at Risk', 'Directional estimate based on failed search demand, average order value, and search-to-order rate. Not guaranteed lost revenue.') ?></div>
+            <div class="searchloss-label"><?= tooltipLabel('Est. Demand Value', 'Directional estimate based on failed search demand, average order value, and search-to-order rate. This highlights potential demand, not guaranteed lost revenue.') ?></div>
             <div class="searchloss-value"><?= money($summary['lost_revenue']) ?></div>
-            <div class="searchloss-help">Estimated revenue at risk.</div>
+            <div class="searchloss-help">Estimated demand value.</div>
         </div>
         <div class="searchloss-card">
             <div class="searchloss-label"><?= tooltipLabel('AOV', 'Average order value calculated from Magento orders, excluding cancelled orders.') ?></div>
@@ -480,50 +861,42 @@ function catalogEvidenceTooltip($label) {
             <div class="searchloss-value"><?= number_format((float)$summary['conversion_rate'], 1) ?>%</div>
             <div class="searchloss-help">Used for revenue modeling.</div>
         </div>
-    </div>
-
-    <div class="searchloss-insights">
-        <div class="searchloss-insight">
-            <h3>Demand signal</h3>
-            <p>
-                Customers are telling you what they could not find. Repeated failed searches point to missed demand.
-            </p>
         </div>
+    </details>
 
-        <div class="searchloss-insight">
-            <h3>Revenue model</h3>
-            <p>
-                This view shows <?= number_format((int)$summary['failed_searches']) ?> failed searches and <?= money($summary['lost_revenue']) ?> in directional revenue at risk.
-            </p>
-        </div>
-
-        <div class="searchloss-insight">
-            <h3>Fix path</h3>
-            <p>
-                Each opportunity points to a likely Magento catalogue, synonym, SKU, or search issue.
-            </p>
-        </div>
-
-        <?php if ($topOpportunity): ?>
-            <div class="searchloss-top-opportunity">
-                <div class="searchloss-top-opportunity-title">Top opportunity</div>
-                <div class="searchloss-top-opportunity-term">
-                    <?= $block->escapeHtml($topOpportunity['term'] ?? '') ?>
+    <?php if (!empty($topMoneyActions)): ?>
+        <details class="searchloss-money-actions">
+            <summary>
+                <div class="searchloss-money-actions-title">
+                    <h2><?= tooltipLabel('Top money actions', 'Groups failed searches by the likely type of work needed, then ranks those groups by estimated demand value so you can see where to review first.') ?></h2>
+                    <p>Highest-value work types in this audit. Expand to see where to start.</p>
                 </div>
-                <p class="searchloss-top-opportunity-copy">
-                    <?= money($topOpportunity['lostRevenue'] ?? 0) ?> estimated revenue at risk across <?= number_format((int)($topOpportunity['count'] ?? 0)) ?> failed searches.
-                    Suggested review: <?= $block->escapeHtml($topOpportunity['fixType'] ?? 'Needs manual review') ?>.
-                </p>
+            </summary>
+            <div class="searchloss-money-actions-grid">
+                <?php foreach ($topMoneyActions as $index => $action): ?>
+                    <div class="searchloss-money-action" data-money-effort="<?= $block->escapeHtmlAttr(strtolower((string)$action['label'])) ?>">
+<div class="searchloss-money-action-title">
+                            <?= tooltipLabel((string)$action['label'], fixEffortTooltip((string)$action['label'])) ?>
+                        </div>
+                        <div class="searchloss-money-action-value"><?= money($action['value']) ?></div>
+                        <div class="searchloss-money-action-meta">
+                            <?= number_format((int)$action['terms']) ?> terms · <?= number_format((int)$action['searches']) ?> failed searches
+                        </div>
+                    </div>
+                <?php endforeach; ?>
             </div>
-        <?php endif; ?>
-    </div>
+            <button type="button" class="searchloss-money-actions-clear" id="searchloss-clear-money-action-filter">
+                Clear work type filter
+            </button>
+        </details>
+    <?php endif; ?>
 
     <div class="searchloss-section">
         <div class="searchloss-section-header">
             <div class="searchloss-section-head">
                 <div class="searchloss-section-copy">
-                    <h2>Ranked search opportunities</h2>
-                    <p>Highest-priority failed searches ranked by demand, estimated revenue at risk, likely issue type, and confidence.</p>
+                    <h2>Prioritized search findings</h2>
+                    <p>Highest-priority search findings ranked by demand, estimated demand value, diagnosis, and confidence.</p>
                 </div>
 
                 <div class="searchloss-periods">
@@ -546,7 +919,7 @@ function catalogEvidenceTooltip($label) {
                 </div>
 
                 <div class="searchloss-filter-field">
-                    <label for="searchloss-priority-filter"><?= tooltipLabel('Priority', 'Priority is based on search demand and estimated revenue at risk.') ?></label>
+                    <label for="searchloss-priority-filter"><?= tooltipLabel('Priority', 'Priority is based on search demand and estimated demand value.') ?></label>
                     <select id="searchloss-priority-filter">
                         <option value="all">All priorities</option>
                         <option value="3">High</option>
@@ -566,23 +939,28 @@ function catalogEvidenceTooltip($label) {
                 <div class="searchloss-filter-field">
                     <label for="searchloss-sort-select"><?= tooltipLabel('Sort by', 'Choose how to rank the visible opportunity list.') ?></label>
                     <select id="searchloss-sort-select">
-                        <option value="revenue:desc">Revenue at risk high-low</option>
-                        <option value="revenue:asc">Revenue at risk low-high</option>
+                        <option value="revenue:desc">Est. demand value high-low</option>
+                        <option value="revenue:asc">Est. demand value low-high</option>
                         <option value="searches:desc">Searches high-low</option>
                         <option value="searches:asc">Searches low-high</option>
                         <option value="term:asc">Term A-Z</option>
                         <option value="term:desc">Term Z-A</option>
                         <option value="priority:desc">Priority high-low</option>
                         <option value="priority:asc">Priority low-high</option>
-                        <option value="issue:asc">Issue type A-Z</option>
-                        <option value="issue:desc">Issue type Z-A</option>
+                        <option value="issue:asc">Diagnosis A-Z</option>
+                        <option value="issue:desc">Diagnosis Z-A</option>
                     </select>
                 </div>
 
                 <button type="button" id="searchloss-reset-filters" class="searchloss-filter-button">Reset</button>
-                <button type="button" id="searchloss-export-csv" class="searchloss-export-button">Export CSV</button>
+                <button type="button" id="searchloss-export-csv" class="searchloss-export-button">Download view</button>
+                <a href="<?= $block->escapeUrl($block->getUrl('searchloss/export/all', ['period' => $currentPeriod])) ?>" class="searchloss-export-button" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;">Download all</a>
             </div>
             <div id="searchloss-filter-count" class="searchloss-filter-count"></div>
+            <div id="searchloss-active-worktype-filter" class="searchloss-active-worktype-filter"></div>
+            <div class="searchloss-table-hint">
+                <strong>Tip:</strong> Click any row to view the diagnosis, recommended fix, and supporting evidence.
+            </div>
 
             <div class="searchloss-table-wrap">
                 <table class="searchloss-table">
@@ -590,12 +968,11 @@ function catalogEvidenceTooltip($label) {
                         <tr>
                             <th><button type="button" class="searchloss-sort-button" data-sort-key="term"><?= tooltipLabel('Term', 'The exact words customers searched for.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
                             <th><button type="button" class="searchloss-sort-button" data-sort-key="searches"><?= tooltipLabel('Searches', 'How many times customers searched this term in the selected period.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
-                            <th><button type="button" class="searchloss-sort-button" data-sort-key="revenue"><?= tooltipLabel('Revenue at Risk', 'Searches multiplied by average order value and search-to-order rate. Directional estimate only.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
+                            <th><button type="button" class="searchloss-sort-button" data-sort-key="revenue"><?= tooltipLabel('Est. Demand Value', 'Directional estimate based on failed search volume, average order value, and search-to-order rate. This highlights potential demand, not guaranteed lost revenue.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
                             <th><button type="button" class="searchloss-sort-button" data-sort-key="priority"><?= tooltipLabel('Priority', 'High priority terms should usually be reviewed first.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
-                            <th><button type="button" class="searchloss-sort-button" data-sort-key="issue"><?= tooltipLabel('Issue Type', 'The likely Magento search, catalog, product data, synonym, SKU, or category issue.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
-                            <th><button type="button" class="searchloss-sort-button" data-sort-key="confidence"><?= tooltipLabel('Confidence', 'How strongly the data suggests this issue type. Higher confidence usually means clearer next action.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
-                            <th><?= tooltipLabel('Suggested Action', 'Recommended next review or fix based on the likely issue type.') ?></th>
-                            <th><?= tooltipLabel('Details', 'Open the diagnostic row for plain-English explanation and Magento checks or fixes.') ?></th>
+                            <th><button type="button" class="searchloss-sort-button" data-sort-key="issue"><?= tooltipLabel('Diagnosis', 'Combined view of likely issue type, fix effort, and confidence.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
+                            <th><?= tooltipLabel('Recommended Next Step', 'Recommended next step based on the diagnosis and Magento evidence.') ?></th>
+                            <th><?= tooltipLabel('Diagnosis', 'Open the diagnostic row for evidence, explanation, and Magento checks or fixes.') ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -603,6 +980,7 @@ function catalogEvidenceTooltip($label) {
                             <?php
                                 $priority = $term['opportunityScore'] ?? 'Review';
                                 $fixType = $term['fixType'] ?? 'Needs manual review';
+                                $fixEffortBucket = $term['fixEffortBucket'] ?? 'Manual review';
                                 $confidence = $term['confidence'] ?? 'Review';
                                 $suggestedFix = $term['suggestedFix'] ?? 'Review this search term against products, categories, synonyms, redirects, and catalog coverage.';
                                 $shortSuggestedAction = $term['shortSuggestedAction'] ?? $suggestedFix;
@@ -623,6 +1001,8 @@ function catalogEvidenceTooltip($label) {
                                 data-priority="<?= (int)$priorityRank ?>"
                                 data-issue="<?= $block->escapeHtmlAttr(strtolower((string)$fixType)) ?>"
                                 data-issue-label="<?= $block->escapeHtmlAttr((string)$fixType) ?>"
+                                data-effort="<?= $block->escapeHtmlAttr(strtolower((string)$fixEffortBucket)) ?>"
+                                data-effort-label="<?= $block->escapeHtmlAttr((string)$fixEffortBucket) ?>"
                                 data-confidence="<?= (int)$confidenceRank ?>"
                                 data-confidence-label="<?= $block->escapeHtmlAttr((string)$confidence) ?>"
                                 data-suggested-action="<?= $block->escapeHtmlAttr((string)$suggestedFix) ?>"
@@ -631,21 +1011,20 @@ function catalogEvidenceTooltip($label) {
                                 <td><?= number_format((int)($term['count'] ?? 0)) ?></td>
                                 <td class="searchloss-money"><?= money($term['lostRevenue'] ?? 0) ?></td>
                                 <td><span class="searchloss-pill" style="<?= priorityStyle($priority) ?>"><?= $block->escapeHtml($priority) ?></span></td>
-                                <td><?= $block->escapeHtml($fixType) ?></td>
-                                <td><?= $block->escapeHtml($confidence) ?></td>
+                                <td class="searchloss-diagnosis">
+                                    <div class="searchloss-diagnosis-issue"><?= $block->escapeHtml($fixType) ?></div>
+                                    <div class="searchloss-meta-pills">
+                                        <span class="searchloss-meta-pill searchloss-meta-pill--effort"><?= $block->escapeHtml($fixEffortBucket) ?></span>
+                                        <span class="searchloss-meta-pill searchloss-meta-pill--confidence">Confidence: <?= $block->escapeHtml($confidence) ?></span>
+                                    </div>
+                                </td>
                                 <td class="searchloss-action"><?= $block->escapeHtml($shortSuggestedAction) ?></td>
-                                <td>
-                                    <button
-                                        type="button"
-                                        class="searchloss-details-button"
-                                        data-searchloss-target="<?= $block->escapeHtmlAttr($detailId) ?>"
-                                    >
-                                        View
-                                    </button>
+                                <td aria-label="Toggle details">
+                                    <span class="searchloss-details-cue" aria-hidden="true">›</span>
                                 </td>
                             </tr>
                             <tr id="<?= $block->escapeHtmlAttr($detailId) ?>" class="searchloss-detail-row">
-                                <td colspan="8" class="searchloss-detail-cell">
+                                <td colspan="7" class="searchloss-detail-cell">
                                     <div class="searchloss-detail-grid">
                                         <div class="searchloss-detail-card">
                                             <div class="searchloss-detail-title">Diagnosis</div>
@@ -653,36 +1032,11 @@ function catalogEvidenceTooltip($label) {
                                                 <?= $block->escapeHtml($plainEnglishMeaning) ?>
                                             </p>
                                             <p class="searchloss-evidence-note">
+                                                <strong>Fix effort:</strong> <?= $block->escapeHtml($fixEffortBucket) ?><br>
                                                 Evidence-led diagnosis. Review before making catalogue or search changes.
                                             </p>
                                         </div>
 
-                                        <div class="searchloss-detail-card">
-                                            <div class="searchloss-detail-title">Catalog signal</div>
-                                            <p class="searchloss-evidence-summary">
-                                                The diagnosis is the summary. Expand this section to see the Magento evidence behind it.
-                                            </p>
-
-                                            <details class="searchloss-evidence-details">
-                                                <summary>Show evidence behind diagnosis</summary>
-
-<?php if (empty($catalogEvidence)): ?>
-                                                <p class="searchloss-detail-text">No catalog evidence was available for this term.</p>
-                                            <?php else: ?>
-                                                <div class="searchloss-evidence-list">
-                                                    <?php foreach ($catalogEvidence as $item): ?>
-                                                        <div class="searchloss-evidence-item">
-                                                            <?php $evidenceLabel = (string)($item['label'] ?? ''); ?>
-                                                            <span class="searchloss-evidence-label">
-                                                                <?= tooltipLabel($evidenceLabel, catalogEvidenceTooltip($evidenceLabel)) ?>
-                                                            </span>
-                                                            <span class="searchloss-evidence-value"><?= $block->escapeHtml($item['value'] ?? '') ?></span>
-                                                        </div>
-                                                    <?php endforeach; ?>
-                                                </div>
-                                            <?php endif; ?>
-                                            </details>
-                                        </div>
 <div class="searchloss-detail-card">
                                             <div class="searchloss-detail-title">Recommended fix</div>
                                             <div class="searchloss-inline-actions">
@@ -712,6 +1066,33 @@ function catalogEvidenceTooltip($label) {
                                                 </ol>
                                             <?php endif; ?>
                                         </div>
+
+                                        <div class="searchloss-detail-card">
+                                            <div class="searchloss-detail-title">Evidence</div>
+                                            <p class="searchloss-evidence-summary">
+                                                Magento catalogue evidence behind the diagnosis and recommended fix.
+                                            </p>
+
+                                            <details class="searchloss-evidence-details">
+                                                <summary>Show Magento evidence</summary>
+
+<?php if (empty($catalogEvidence)): ?>
+                                                <p class="searchloss-detail-text">No catalog evidence was available for this term.</p>
+                                            <?php else: ?>
+                                                <div class="searchloss-evidence-list">
+                                                    <?php foreach ($catalogEvidence as $item): ?>
+                                                        <div class="searchloss-evidence-item">
+                                                            <?php $evidenceLabel = (string)($item['label'] ?? ''); ?>
+                                                            <span class="searchloss-evidence-label">
+                                                                <?= tooltipLabel($evidenceLabel, catalogEvidenceTooltip($evidenceLabel)) ?>
+                                                            </span>
+                                                            <span class="searchloss-evidence-value"><?= $block->escapeHtml($item['value'] ?? '') ?></span>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            <?php endif; ?>
+                                            </details>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -728,6 +1109,7 @@ function catalogEvidenceTooltip($label) {
 document.addEventListener('DOMContentLoaded', function () {
     var currentSortKey = 'revenue';
     var currentSortDirection = 'desc';
+    var currentMoneyActionEffort = 'all';
 
     function getMainRows() {
         return Array.prototype.slice.call(document.querySelectorAll('tr.searchloss-main-row'));
@@ -839,6 +1221,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var termQuery = termInput ? String(termInput.value || '').toLowerCase().trim() : '';
         var priority = prioritySelect ? String(prioritySelect.value || 'all') : 'all';
         var issue = issueSelect ? String(issueSelect.value || 'all') : 'all';
+        var effort = currentMoneyActionEffort || 'all';
 
         var visibleCount = 0;
         var totalCount = 0;
@@ -849,11 +1232,13 @@ document.addEventListener('DOMContentLoaded', function () {
             var rowTerm = String(row.getAttribute('data-term') || '');
             var rowPriority = String(row.getAttribute('data-priority') || '');
             var rowIssue = String(row.getAttribute('data-issue') || '');
+            var rowEffort = String(row.getAttribute('data-effort') || '');
 
             var matchesTerm = !termQuery || rowTerm.indexOf(termQuery) !== -1;
             var matchesPriority = priority === 'all' || rowPriority === priority;
             var matchesIssue = issue === 'all' || rowIssue === issue;
-            var shouldShow = matchesTerm && matchesPriority && matchesIssue;
+            var matchesEffort = effort === 'all' || rowEffort === effort;
+            var shouldShow = matchesTerm && matchesPriority && matchesIssue && matchesEffort;
 
             totalCount += 1;
 
@@ -867,15 +1252,40 @@ document.addEventListener('DOMContentLoaded', function () {
                     detailRow.style.display = 'none';
                 }
 
-                var detailsButton = row.querySelector('.searchloss-details-button');
-                if (detailsButton) {
-                    detailsButton.textContent = 'View';
-                }
+                row.classList.remove('searchloss-main-row--open');
             }
         });
 
         if (countEl) {
             countEl.textContent = 'Showing ' + visibleCount + ' of ' + totalCount + ' terms';
+        }
+    }
+
+    function updateMoneyActionCards() {
+        var wrapper = document.querySelector('.searchloss-money-actions');
+
+        document.querySelectorAll('.searchloss-money-action').forEach(function (card) {
+            var effort = String(card.getAttribute('data-money-effort') || 'all');
+            card.classList.toggle('searchloss-money-action--active', currentMoneyActionEffort !== 'all' && effort === currentMoneyActionEffort);
+        });
+
+        if (wrapper) {
+            wrapper.classList.toggle('searchloss-money-actions--filtered', currentMoneyActionEffort !== 'all');
+        }
+
+        var activeFilter = document.getElementById('searchloss-active-worktype-filter');
+
+        if (activeFilter) {
+            if (currentMoneyActionEffort === 'all') {
+                activeFilter.classList.remove('is-visible');
+                activeFilter.innerHTML = '';
+            } else {
+                var activeCard = document.querySelector('.searchloss-money-action--active');
+                var activeLabel = activeCard ? activeCard.getAttribute('data-money-effort-label') : currentMoneyActionEffort;
+
+                activeFilter.classList.add('is-visible');
+                activeFilter.innerHTML = 'Showing work type: ' + activeLabel + ' <button type="button" id="searchloss-clear-active-worktype-filter">Clear</button>';
+            }
         }
     }
 
@@ -901,19 +1311,19 @@ document.addEventListener('DOMContentLoaded', function () {
             sortSelect.value = 'revenue:desc';
         }
 
+        currentMoneyActionEffort = 'all';
+        updateMoneyActionCards();
+
         getMainRows().forEach(function (row) {
             var detailRow = getDetailRow(row);
-            var detailsButton = row.querySelector('.searchloss-details-button');
 
             row.style.display = '';
+            row.classList.remove('searchloss-main-row--open');
 
             if (detailRow) {
                 detailRow.style.display = 'none';
             }
 
-            if (detailsButton) {
-                detailsButton.textContent = 'View';
-            }
         });
 
         sortRows('revenue', 'desc');
@@ -927,7 +1337,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function exportCsv() {
         var rows = [
-            ['Term', 'Searches', 'Revenue at Risk', 'Priority', 'Issue Type', 'Confidence', 'Suggested Action']
+            ['Term', 'Searches', 'Est. Demand Value', 'Priority', 'Issue Type', 'Fix Effort', 'Confidence', 'Recommended Next Step']
         ];
 
         getMainRows().forEach(function (row) {
@@ -944,6 +1354,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 row.getAttribute('data-revenue') || '',
                 priorityEl ? priorityEl.textContent.trim() : '',
                 row.getAttribute('data-issue-label') || '',
+                row.getAttribute('data-effort-label') || '',
                 row.getAttribute('data-confidence-label') || '',
                 row.getAttribute('data-suggested-action') || ''
             ]);
@@ -958,7 +1369,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var link = document.createElement('a');
 
         link.href = url;
-        link.download = 'search-loss-opportunities.csv';
+        link.download = 'search-loss-current-view.csv';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -966,16 +1377,40 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     document.addEventListener('click', function (event) {
-        var detailsButton = event.target.closest('.searchloss-details-button');
+        var moneyActionCard = event.target.closest('.searchloss-money-action');
 
-        if (detailsButton) {
-            var target = detailsButton.getAttribute('data-searchloss-target');
-            var row = target ? document.getElementById(target) : null;
+        if (moneyActionCard) {
+            var selectedEffort = String(moneyActionCard.getAttribute('data-money-effort') || 'all');
+            currentMoneyActionEffort = currentMoneyActionEffort === selectedEffort ? 'all' : selectedEffort;
+            updateMoneyActionCards();
+            applyFilters();
 
-            if (row) {
-                var isVisible = row.style.display !== 'none' && row.style.display !== '';
-                row.style.display = isVisible ? 'none' : 'table-row';
-                detailsButton.textContent = isVisible ? 'View' : 'Hide';
+            var tableSection = document.querySelector('.searchloss-section');
+            if (tableSection) {
+                tableSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            return;
+        }
+
+        var clearMoneyActionFilter = event.target.closest('#searchloss-clear-money-action-filter, #searchloss-clear-active-worktype-filter');
+
+        if (clearMoneyActionFilter) {
+            currentMoneyActionEffort = 'all';
+            updateMoneyActionCards();
+            applyFilters();
+            return;
+        }
+
+        var mainRow = event.target.closest('tr.searchloss-main-row');
+
+        if (mainRow) {
+            var detailRow = getDetailRow(mainRow);
+
+            if (detailRow) {
+                var isVisible = detailRow.style.display !== 'none' && detailRow.style.display !== '';
+                detailRow.style.display = isVisible ? 'none' : 'table-row';
+                mainRow.classList.toggle('searchloss-main-row--open', !isVisible);
             }
 
             return;
