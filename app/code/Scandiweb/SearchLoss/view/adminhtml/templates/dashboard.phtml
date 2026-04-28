@@ -176,8 +176,12 @@ function catalogEvidenceTooltip($label) {
 .searchloss-table th:nth-child(6) { width:27%; }
 .searchloss-table th:nth-child(7) { width:6%; }
 .searchloss-empty { padding:22px; color:#64748b; font-size:13px; }
-.searchloss-details-button { border:1px solid #bfdbfe; background:#eff6ff; color:#1d4ed8; border-radius:8px; padding:5px 9px; font-size:12px; font-weight:700; cursor:pointer; }
-.searchloss-details-button:hover { background:#dbeafe; border-color:#93c5fd; }
+.searchloss-main-row { cursor:pointer; }
+.searchloss-main-row:hover td { background:#f8fafc; }
+.searchloss-main-row--open td { background:#f8fafc; }
+.searchloss-details-cue { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid #dbeafe; border-radius:999px; background:#eff6ff; color:#1d4ed8; font-size:16px; font-weight:900; line-height:1; transition:transform .15s ease, background .15s ease, border-color .15s ease; }
+.searchloss-main-row:hover .searchloss-details-cue { background:#dbeafe; border-color:#93c5fd; }
+.searchloss-main-row--open .searchloss-details-cue { transform:rotate(90deg); background:#dbeafe; border-color:#93c5fd; }
 .searchloss-detail-row { display:none; }
 .searchloss-detail-cell { background:#f8fafc; padding:18px !important; }
 .searchloss-detail-grid { display:grid; grid-template-columns:minmax(220px,.8fr) minmax(260px,1fr) minmax(320px,1.2fr); gap:14px; }
@@ -663,14 +667,8 @@ function catalogEvidenceTooltip($label) {
                                     </div>
                                 </td>
                                 <td class="searchloss-action"><?= $block->escapeHtml($shortSuggestedAction) ?></td>
-                                <td>
-                                    <button
-                                        type="button"
-                                        class="searchloss-details-button"
-                                        data-searchloss-target="<?= $block->escapeHtmlAttr($detailId) ?>"
-                                    >
-                                        View
-                                    </button>
+                                <td aria-label="Toggle details">
+                                    <span class="searchloss-details-cue" aria-hidden="true">›</span>
                                 </td>
                             </tr>
                             <tr id="<?= $block->escapeHtmlAttr($detailId) ?>" class="searchloss-detail-row">
@@ -897,10 +895,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     detailRow.style.display = 'none';
                 }
 
-                var detailsButton = row.querySelector('.searchloss-details-button');
-                if (detailsButton) {
-                    detailsButton.textContent = 'View';
-                }
+                row.classList.remove('searchloss-main-row--open');
             }
         });
 
@@ -933,17 +928,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
         getMainRows().forEach(function (row) {
             var detailRow = getDetailRow(row);
-            var detailsButton = row.querySelector('.searchloss-details-button');
 
             row.style.display = '';
+            row.classList.remove('searchloss-main-row--open');
 
             if (detailRow) {
                 detailRow.style.display = 'none';
             }
 
-            if (detailsButton) {
-                detailsButton.textContent = 'View';
-            }
         });
 
         sortRows('revenue', 'desc');
@@ -997,16 +989,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     document.addEventListener('click', function (event) {
-        var detailsButton = event.target.closest('.searchloss-details-button');
+        var mainRow = event.target.closest('tr.searchloss-main-row');
 
-        if (detailsButton) {
-            var target = detailsButton.getAttribute('data-searchloss-target');
-            var row = target ? document.getElementById(target) : null;
+        if (mainRow) {
+            var detailRow = getDetailRow(mainRow);
 
-            if (row) {
-                var isVisible = row.style.display !== 'none' && row.style.display !== '';
-                row.style.display = isVisible ? 'none' : 'table-row';
-                detailsButton.textContent = isVisible ? 'View' : 'Hide';
+            if (detailRow) {
+                var isVisible = detailRow.style.display !== 'none' && detailRow.style.display !== '';
+                detailRow.style.display = isVisible ? 'none' : 'table-row';
+                mainRow.classList.toggle('searchloss-main-row--open', !isVisible);
             }
 
             return;
