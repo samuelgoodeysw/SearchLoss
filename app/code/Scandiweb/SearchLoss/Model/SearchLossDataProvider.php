@@ -779,11 +779,13 @@ class SearchLossDataProvider
             return 'Product exists but search is not matching it';
         }
 
-        if (preg_match('/[a-z]*\d+[a-z\d\-\.]*/i', $term)) {
-            return 'SKU or part number is not matching';
-        }
+        $hasIdentifierLanguage = preg_match('/\b(sku|part|part\s*number|mpn|oem|cross\s*reference|xref|barcode|serial|model)\b/i', $normalized);
+        $hasCompactIdentifier = preg_match('/\b[a-z]{2,}[-\.]?\d{2,}[a-z0-9-\.]*\b/i', $term)
+            || preg_match('/\b\d{2,}[-\.]?[a-z]{1,}[a-z0-9-\.]*\b/i', $term);
+        $hasDimensionLikeIdentifier = preg_match('/\b\d+(?:x\d+){1,}\b/i', $term);
+        $hasHyphenatedNumericIdentifier = preg_match('/\b\d{2,}[-\.]\d{2,}\b/i', $term);
 
-        if (preg_match('/\b[a-z]+[\-\.]?[a-z]*\d+[a-z0-9\-\.]*\b/i', $term) || preg_match('/\b\d+[a-z]+[a-z0-9\-\.]*\b/i', $term)) {
+        if ($hasIdentifierLanguage || $hasCompactIdentifier || $hasDimensionLikeIdentifier || $hasHyphenatedNumericIdentifier) {
             return 'SKU or part number is not matching';
         }
 
