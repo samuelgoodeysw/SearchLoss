@@ -470,9 +470,9 @@ function catalogEvidenceTooltip($label) {
 
 <div class="searchloss-page">
     <div class="searchloss-hero">
-        <h1>Search Opportunity Dashboard</h1>
+        <h1>Search Loss Audit</h1>
         <p>
-            Find failed searches, estimate demand value, and see what Magento should review first.
+            Find missed search demand, estimate demand value, and see what Magento should review first.
         </p>
         <div class="searchloss-status">
             Read-only Magento diagnostic. No storefront changes made.
@@ -531,13 +531,13 @@ function catalogEvidenceTooltip($label) {
 
         <?php if ($topOpportunity): ?>
             <div class="searchloss-top-opportunity">
-                <div class="searchloss-top-opportunity-title">Top opportunity</div>
+                <div class="searchloss-top-opportunity-title">Top finding</div>
                 <div class="searchloss-top-opportunity-term">
                     <?= $block->escapeHtml($topOpportunity['term'] ?? '') ?>
                 </div>
                 <p class="searchloss-top-opportunity-copy">
                     <?= money($topOpportunity['lostRevenue'] ?? 0) ?> estimated demand value across <?= number_format((int)($topOpportunity['count'] ?? 0)) ?> failed searches.
-                    Suggested review: <?= $block->escapeHtml($topOpportunity['fixType'] ?? 'Needs manual review') ?>.
+                    Recommended review: <?= $block->escapeHtml($topOpportunity['fixType'] ?? 'Needs manual review') ?>.
                 </p>
             </div>
         <?php endif; ?>
@@ -547,8 +547,8 @@ function catalogEvidenceTooltip($label) {
         <div class="searchloss-section-header">
             <div class="searchloss-section-head">
                 <div class="searchloss-section-copy">
-                    <h2>Ranked search opportunities</h2>
-                    <p>Highest-priority failed searches ranked by demand, estimated demand value, likely issue type, and confidence.</p>
+                    <h2>Prioritized search findings</h2>
+                    <p>Highest-priority search findings ranked by demand, estimated demand value, diagnosis, and confidence.</p>
                 </div>
 
                 <div class="searchloss-periods">
@@ -619,8 +619,8 @@ function catalogEvidenceTooltip($label) {
                             <th><button type="button" class="searchloss-sort-button" data-sort-key="revenue"><?= tooltipLabel('Est. Demand Value', 'Directional estimate based on failed search volume, average order value, and search-to-order rate. This highlights potential demand, not guaranteed lost revenue.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
                             <th><button type="button" class="searchloss-sort-button" data-sort-key="priority"><?= tooltipLabel('Priority', 'High priority terms should usually be reviewed first.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
                             <th><button type="button" class="searchloss-sort-button" data-sort-key="issue"><?= tooltipLabel('Diagnosis', 'Combined view of likely issue type, fix effort, and confidence.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
-                            <th><?= tooltipLabel('Suggested Action', 'Recommended next review or fix based on the likely issue type.') ?></th>
-                            <th><?= tooltipLabel('Details', 'Open the diagnostic row for plain-English explanation and Magento checks or fixes.') ?></th>
+                            <th><?= tooltipLabel('Recommended Next Step', 'Recommended next step based on the diagnosis and Magento evidence.') ?></th>
+                            <th><?= tooltipLabel('Diagnosis', 'Open the diagnostic row for evidence, explanation, and Magento checks or fixes.') ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -949,7 +949,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function exportCsv() {
         var rows = [
-            ['Term', 'Searches', 'Est. Demand Value', 'Priority', 'Issue Type', 'Fix Effort', 'Confidence', 'Suggested Action']
+            ['Term', 'Searches', 'Est. Demand Value', 'Priority', 'Issue Type', 'Fix Effort', 'Confidence', 'Recommended Next Step']
         ];
 
         getMainRows().forEach(function (row) {
