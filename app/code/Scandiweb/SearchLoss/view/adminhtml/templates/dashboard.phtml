@@ -707,7 +707,7 @@ function catalogEvidenceTooltip($label) {
     top:calc(100% + 10px);
     width:min(900px, calc(100vw - 120px));
     display:grid;
-    grid-template-columns:repeat(3,minmax(160px,1fr));
+    grid-template-columns:repeat(4,minmax(150px,1fr));
     gap:12px;
     padding:16px;
     border:1px solid rgba(148,163,184,.30);
@@ -836,6 +836,10 @@ function catalogEvidenceTooltip($label) {
             <div class="searchloss-audit-guide-item">
                 <h3>Fix the fastest wins</h3>
                 <p>Prioritize rows where products already exist but search, visibility, stock, attributes, or catalogue setup may be stopping customers.</p>
+            </div>
+            <div class="searchloss-audit-guide-item">
+                <h3>Evidence-led recommendations</h3>
+                <p>Diagnoses are rules-based and read-only. Search Loss checks Magento evidence, then maps it to a recommended review path without changing storefront data.</p>
             </div>
         </div>
     </details>
