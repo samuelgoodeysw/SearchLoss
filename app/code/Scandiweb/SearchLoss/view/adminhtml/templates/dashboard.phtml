@@ -953,8 +953,8 @@ function catalogEvidenceTooltip($label) {
                 </div>
 
                 <button type="button" id="searchloss-reset-filters" class="searchloss-filter-button">Reset</button>
-                <button type="button" id="searchloss-export-csv" class="searchloss-export-button">Download view</button>
-                <a href="<?= $block->escapeUrl($block->getUrl('searchloss/export/all', ['period' => $currentPeriod])) ?>" class="searchloss-export-button" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;">Download all</a>
+                <button type="button" id="searchloss-export-csv" class="searchloss-export-button">Download current view</button>
+                <a href="<?= $block->escapeUrl($block->getUrl('searchloss/export/all', ['period' => $currentPeriod])) ?>" class="searchloss-export-button" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;">Download all findings</a>
             </div>
             <div id="searchloss-filter-count" class="searchloss-filter-count"></div>
             <div id="searchloss-active-worktype-filter" class="searchloss-active-worktype-filter"></div>
