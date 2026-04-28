@@ -126,6 +126,7 @@ class SearchLossDataProvider
         ];
 
         $identityAttributeCodes = $this->getIdentityAttributeCodes();
+        $attributeCodesToCheck = array_values(array_unique(array_merge($coreAttributeCodes, $identityAttributeCodes)));
 
         $attributeRows = $connection->fetchAll(
             $connection->select()
@@ -144,14 +145,17 @@ class SearchLossDataProvider
                     []
                 )
                 ->where('eet.entity_type_code = ?', 'catalog_product')
-                ->where('ea.attribute_code IN (?)', array_values(array_unique(array_merge($coreAttributeCodes, $identityAttributeCodes))))
+                ->where('ea.attribute_code IN (?)', $attributeCodesToCheck)
                 ->order('ea.attribute_code ASC')
         );
 
         $foundCoreAttributes = [];
         $searchableCoreAttributes = [];
+        $nonSearchableCoreAttributes = [];
+
         $foundIdentityAttributes = [];
         $searchableIdentityAttributes = [];
+        $nonSearchableIdentityAttributes = [];
 
         foreach ($attributeRows as $attribute) {
             $code = (string)$attribute['attribute_code'];
@@ -162,6 +166,8 @@ class SearchLossDataProvider
 
                 if ($isSearchable) {
                     $searchableCoreAttributes[] = $code;
+                } else {
+                    $nonSearchableCoreAttributes[] = $code;
                 }
             }
 
@@ -170,6 +176,8 @@ class SearchLossDataProvider
 
                 if ($isSearchable) {
                     $searchableIdentityAttributes[] = $code;
+                } else {
+                    $nonSearchableIdentityAttributes[] = $code;
                 }
             }
         }
@@ -177,8 +185,12 @@ class SearchLossDataProvider
         return [
             'coreAttributesFound' => empty($foundCoreAttributes) ? 'None' : implode(', ', $foundCoreAttributes),
             'searchableCoreAttributes' => empty($searchableCoreAttributes) ? 'None' : implode(', ', $searchableCoreAttributes),
+            'nonSearchableCoreAttributes' => empty($nonSearchableCoreAttributes) ? 'None' : implode(', ', $nonSearchableCoreAttributes),
+
             'identityAttributesFoundList' => empty($foundIdentityAttributes) ? 'None' : implode(', ', $foundIdentityAttributes),
             'searchableIdentityAttributesList' => empty($searchableIdentityAttributes) ? 'None' : implode(', ', $searchableIdentityAttributes),
+            'nonSearchableIdentityAttributesList' => empty($nonSearchableIdentityAttributes) ? 'None' : implode(', ', $nonSearchableIdentityAttributes),
+
             'coreAttributeSearchCoverage' => count($foundCoreAttributes) > 0
                 ? count($searchableCoreAttributes) . ' of ' . count($foundCoreAttributes)
                 : '0 of 0',
@@ -187,6 +199,7 @@ class SearchLossDataProvider
                 : '0 of 0',
         ];
     }
+
 
     private function getIdentityAttributeCodes(): array
     {
@@ -699,12 +712,14 @@ class SearchLossDataProvider
             ['label' => 'Not assigned to category', 'value' => (string)$visibilitySignals['notAssignedToCategory']],
             ['label' => 'In stock product matches', 'value' => (string)$visibilitySignals['inStockProducts']],
             ['label' => 'Out of stock product matches', 'value' => (string)$visibilitySignals['outOfStockProducts']],
-            ['label' => 'Core product attributes found', 'value' => $searchableAttributeSignals['coreAttributesFound']],
-            ['label' => 'Searchable core product attributes', 'value' => $searchableAttributeSignals['searchableCoreAttributes']],
-            ['label' => 'Core attribute search coverage', 'value' => $searchableAttributeSignals['coreAttributeSearchCoverage']],
-            ['label' => 'Identity attributes found list', 'value' => $searchableAttributeSignals['identityAttributesFoundList']],
-            ['label' => 'Searchable identity attributes list', 'value' => $searchableAttributeSignals['searchableIdentityAttributesList']],
-            ['label' => 'Identity attribute search coverage', 'value' => $searchableAttributeSignals['identityAttributeSearchCoverage']],
+            ['label' => 'Core product fields found', 'value' => $searchableAttributeSignals['coreAttributesFound']],
+            ['label' => 'Searchable core product fields', 'value' => $searchableAttributeSignals['searchableCoreAttributes']],
+            ['label' => 'Non-searchable core product fields', 'value' => $searchableAttributeSignals['nonSearchableCoreAttributes']],
+            ['label' => 'Core field search coverage', 'value' => $searchableAttributeSignals['coreAttributeSearchCoverage']],
+            ['label' => 'Identity fields found', 'value' => $searchableAttributeSignals['identityAttributesFoundList']],
+            ['label' => 'Searchable identity fields', 'value' => $searchableAttributeSignals['searchableIdentityAttributesList']],
+            ['label' => 'Non-searchable identity fields', 'value' => $searchableAttributeSignals['nonSearchableIdentityAttributesList']],
+            ['label' => 'Identity field search coverage', 'value' => $searchableAttributeSignals['identityAttributeSearchCoverage']],
             ['label' => 'Identity attributes found', 'value' => (string)$identitySignals['identityAttributesFound']],
             ['label' => 'Searchable identity attributes', 'value' => (string)$identitySignals['searchableIdentityAttributes']],
             ['label' => 'Identity attribute matches', 'value' => (string)$identitySignals['identityAttributeMatches']],
@@ -764,11 +779,13 @@ class SearchLossDataProvider
             return 'Product exists but search is not matching it';
         }
 
-        if (preg_match('/[a-z]*\d+[a-z\d\-\.]*/i', $term)) {
-            return 'SKU or part number is not matching';
-        }
+        $hasIdentifierLanguage = preg_match('/\b(sku|part|part\s*number|mpn|oem|cross\s*reference|xref|barcode|serial|model)\b/i', $normalized);
+        $hasCompactIdentifier = preg_match('/\b[a-z]{2,}[-\.]?\d{2,}[a-z0-9-\.]*\b/i', $term)
+            || preg_match('/\b\d{2,}[-\.]?[a-z]{1,}[a-z0-9-\.]*\b/i', $term);
+        $hasDimensionLikeIdentifier = preg_match('/\b\d+(?:x\d+){1,}\b/i', $term);
+        $hasHyphenatedNumericIdentifier = preg_match('/\b\d{2,}[-\.]\d{2,}\b/i', $term);
 
-        if (preg_match('/\b[a-z]+[\-\.]?[a-z]*\d+[a-z0-9\-\.]*\b/i', $term) || preg_match('/\b\d+[a-z]+[a-z0-9\-\.]*\b/i', $term)) {
+        if ($hasIdentifierLanguage || $hasCompactIdentifier || $hasDimensionLikeIdentifier || $hasHyphenatedNumericIdentifier) {
             return 'SKU or part number is not matching';
         }
 
