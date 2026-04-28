@@ -138,39 +138,89 @@ function catalogEvidenceTooltip($label) {
 .searchloss-label { color:#64748b; font-size:11px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
 .searchloss-value { margin-top:10px; color:#020617; font-size:30px; font-weight:900; letter-spacing:-.035em; }
 .searchloss-help { margin-top:7px; color:#64748b; font-size:13px; line-height:1.45; }
-.searchloss-tooltip-label { display:inline-flex; align-items:center; gap:6px; position:relative; vertical-align:middle; }
-.searchloss-tooltip-icon { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border:1px solid #cbd5e1; border-radius:999px; color:#64748b; background:#fff; font-size:11px; font-weight:900; line-height:1; cursor:help; flex:0 0 auto; }
+.searchloss-tooltip-label { display:inline-flex; align-items:center; gap:7px; position:relative; vertical-align:middle; overflow:visible; }
+.searchloss-tooltip-icon { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border:1px solid #cbd5e1; border-radius:999px; color:#64748b; background:#fff; font-size:11px; font-weight:900; line-height:1; cursor:help; flex:0 0 auto; }
 .searchloss-tooltip-icon:hover,
 .searchloss-tooltip-icon:focus { border-color:#93c5fd; color:#1d4ed8; background:#eff6ff; outline:none; }
 .searchloss-tooltip-bubble {
     display:none;
     position:absolute;
-    z-index:50;
-    left:0;
-    top:24px;
-    width:240px;
-    max-width:240px;
-    padding:10px 11px;
-    border:1px solid #cbd5e1;
+    z-index:500;
+    left:50%;
+    bottom:calc(100% + 10px);
+    transform:translateX(-50%);
+    width:max-content;
+    min-width:220px;
+    max-width:300px;
+    padding:11px 13px;
+    border:1px solid #1e293b;
     border-radius:10px;
     background:#0f172a;
-    color:#e2e8f0;
-    box-shadow:0 14px 30px rgba(15,23,42,.22);
+    color:#f8fafc;
+    box-shadow:0 16px 34px rgba(15,23,42,.28);
     font-size:12px;
-    font-weight:600;
+    font-weight:650;
     letter-spacing:0;
     line-height:1.45;
     text-transform:none;
     white-space:normal;
-    word-break:break-word;
-    overflow-wrap:anywhere;
+    word-break:normal;
+    overflow-wrap:break-word;
+    text-align:left;
+    pointer-events:none;
+}
+.searchloss-tooltip-bubble::after {
+    content:"";
+    position:absolute;
+    left:50%;
+    top:100%;
+    transform:translateX(-50%);
+    border:6px solid transparent;
+    border-top-color:#0f172a;
 }
 .searchloss-tooltip-label:hover .searchloss-tooltip-bubble,
 .searchloss-tooltip-icon:focus + .searchloss-tooltip-bubble { display:block; }
-.searchloss-table th .searchloss-tooltip-bubble { top:22px; }
+
+/* Section headings sit near the top of panels, so open their help text below. */
+.searchloss-kpi-panel-title h2 .searchloss-tooltip-bubble,
+.searchloss-money-actions-title h2 .searchloss-tooltip-bubble,
+.searchloss-section-header h2 .searchloss-tooltip-bubble {
+    top:calc(100% + 10px);
+    bottom:auto;
+}
+.searchloss-kpi-panel-title h2 .searchloss-tooltip-bubble::after,
+.searchloss-money-actions-title h2 .searchloss-tooltip-bubble::after,
+.searchloss-section-header h2 .searchloss-tooltip-bubble::after {
+    top:auto;
+    bottom:100%;
+    border-top-color:transparent;
+    border-bottom-color:#0f172a;
+}
+
+/* Table/filter headers need compact downward tooltips so they do not cover controls awkwardly. */
+.searchloss-table th .searchloss-tooltip-bubble,
+.searchloss-filters .searchloss-tooltip-bubble {
+    top:calc(100% + 8px);
+    bottom:auto;
+    left:0;
+    transform:none;
+}
+.searchloss-table th .searchloss-tooltip-bubble::after,
+.searchloss-filters .searchloss-tooltip-bubble::after {
+    top:auto;
+    bottom:100%;
+    left:14px;
+    transform:none;
+    border-top-color:transparent;
+    border-bottom-color:#0f172a;
+}
 .searchloss-table th:nth-last-child(-n+4) .searchloss-tooltip-bubble {
     left:auto;
     right:0;
+}
+.searchloss-table th:nth-last-child(-n+4) .searchloss-tooltip-bubble::after {
+    left:auto;
+    right:14px;
 }
 .searchloss-insights { display:grid; grid-template-columns:repeat(4,minmax(220px,1fr)); gap:14px; margin-bottom:18px; }
 .searchloss-insight { background:#fff; border:1px solid #d7dce2; border-radius:18px; padding:20px 22px; box-shadow:0 10px 24px rgba(15,23,42,.055); min-height:100%; }
@@ -234,6 +284,52 @@ function catalogEvidenceTooltip($label) {
     z-index: 120;
     bottom: auto;
 }
+
+/* Tooltip positioning fix: keep bubbles inside the Magento admin content area. */
+.searchloss-tooltip-bubble {
+    left:0;
+    right:auto;
+    top:calc(100% + 10px);
+    bottom:auto;
+    transform:none;
+    max-width:320px;
+}
+
+.searchloss-tooltip-bubble::after {
+    top:auto;
+    bottom:100%;
+    left:20px;
+    right:auto;
+    transform:none;
+    border-top-color:transparent;
+    border-bottom-color:#0f172a;
+}
+
+.searchloss-table th:nth-last-child(-n+4) .searchloss-tooltip-bubble,
+.searchloss-money-action .searchloss-tooltip-bubble {
+    left:auto;
+    right:0;
+    transform:none;
+}
+
+.searchloss-table th:nth-last-child(-n+4) .searchloss-tooltip-bubble::after,
+.searchloss-money-action .searchloss-tooltip-bubble::after {
+    left:auto;
+    right:20px;
+    transform:none;
+}
+
+.searchloss-kpi-panel,
+.searchloss-section,
+.searchloss-section-header,
+.searchloss-card,
+.searchloss-grid,
+.searchloss-money-actions,
+.searchloss-money-actions-grid,
+.searchloss-money-action {
+    overflow:visible;
+}
+
 @media (max-width:1000px) { .searchloss-money-actions-grid { grid-template-columns:1fr; } }
 
 .searchloss-section { background:#fff; border:1px solid #d7dce2; border-radius:18px; margin-bottom:18px; overflow:hidden; box-shadow:0 8px 20px rgba(15,23,42,.06); }
