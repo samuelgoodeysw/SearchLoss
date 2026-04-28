@@ -1233,6 +1233,28 @@ document.addEventListener('DOMContentLoaded', function () {
     var currentMoneyActionEffort = 'all';
     var currentMoneyActionEffortLabel = '';
 
+    function closeAuditGuideOnOutsideClick() {
+        document.addEventListener('click', function (event) {
+            document.querySelectorAll('.searchloss-audit-guide[open]').forEach(function (guide) {
+                if (!guide.contains(event.target)) {
+                    guide.removeAttribute('open');
+                }
+            });
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key !== 'Escape') {
+                return;
+            }
+
+            document.querySelectorAll('.searchloss-audit-guide[open]').forEach(function (guide) {
+                guide.removeAttribute('open');
+            });
+        });
+    }
+
+    closeAuditGuideOnOutsideClick();
+
     function getMainRows() {
         return Array.prototype.slice.call(document.querySelectorAll('tr.searchloss-main-row'));
     }
