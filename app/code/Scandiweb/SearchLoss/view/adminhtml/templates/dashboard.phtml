@@ -231,7 +231,40 @@ function catalogEvidenceTooltip($label) {
 .searchloss-filter-button:hover { background:#f8fafc; border-color:#94a3b8; }
 .searchloss-export-button { min-height:36px; border:1px solid #bfdbfe; border-radius:10px; background:#eff6ff; color:#1d4ed8; padding:7px 12px; font-size:13px; font-weight:800; cursor:pointer; }
 .searchloss-export-button:hover { background:#dbeafe; border-color:#93c5fd; }
-.searchloss-filter-count { padding:0 18px 12px; color:#64748b; font-size:12px; background:#fff; }
+.searchloss-filter-count { padding:0 18px 8px; color:#64748b; font-size:12px; background:#fff; }
+.searchloss-table-hint {
+    padding:0 18px 12px;
+    color:#64748b;
+    font-size:12px;
+    background:#fff;
+}
+.searchloss-table-hint strong {
+    color:#334155;
+}
+.searchloss-active-worktype-filter {
+    display:none;
+    margin:0 18px 12px;
+    padding:10px 12px;
+    border:1px solid #bfdbfe;
+    border-radius:10px;
+    background:#eff6ff;
+    color:#1d4ed8;
+    font-size:13px;
+    font-weight:800;
+}
+.searchloss-active-worktype-filter.is-visible {
+    display:block;
+}
+.searchloss-active-worktype-filter button {
+    margin-left:8px;
+    border:0;
+    background:transparent;
+    color:#1557d6;
+    font-size:12px;
+    font-weight:900;
+    cursor:pointer;
+    text-decoration:underline;
+}
 @media (max-width:1200px) { .searchloss-filter-bar { grid-template-columns:1fr 1fr; } }
 .searchloss-table-wrap { overflow-x:auto; }
 .searchloss-table { width:100%; border-collapse:collapse; background:#fff; }
@@ -924,6 +957,10 @@ function catalogEvidenceTooltip($label) {
                 <a href="<?= $block->escapeUrl($block->getUrl('searchloss/export/all', ['period' => $currentPeriod])) ?>" class="searchloss-export-button" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;">Download all</a>
             </div>
             <div id="searchloss-filter-count" class="searchloss-filter-count"></div>
+            <div id="searchloss-active-worktype-filter" class="searchloss-active-worktype-filter"></div>
+            <div class="searchloss-table-hint">
+                <strong>Tip:</strong> Click any row to view the diagnosis, recommended fix, and supporting evidence.
+            </div>
 
             <div class="searchloss-table-wrap">
                 <table class="searchloss-table">
@@ -1235,6 +1272,21 @@ document.addEventListener('DOMContentLoaded', function () {
         if (wrapper) {
             wrapper.classList.toggle('searchloss-money-actions--filtered', currentMoneyActionEffort !== 'all');
         }
+
+        var activeFilter = document.getElementById('searchloss-active-worktype-filter');
+
+        if (activeFilter) {
+            if (currentMoneyActionEffort === 'all') {
+                activeFilter.classList.remove('is-visible');
+                activeFilter.innerHTML = '';
+            } else {
+                var activeCard = document.querySelector('.searchloss-money-action--active');
+                var activeLabel = activeCard ? activeCard.getAttribute('data-money-effort-label') : currentMoneyActionEffort;
+
+                activeFilter.classList.add('is-visible');
+                activeFilter.innerHTML = 'Showing work type: ' + activeLabel + ' <button type="button" id="searchloss-clear-active-worktype-filter">Clear</button>';
+            }
+        }
     }
 
     function resetFilters() {
@@ -1341,7 +1393,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        var clearMoneyActionFilter = event.target.closest('#searchloss-clear-money-action-filter');
+        var clearMoneyActionFilter = event.target.closest('#searchloss-clear-money-action-filter, #searchloss-clear-active-worktype-filter');
 
         if (clearMoneyActionFilter) {
             currentMoneyActionEffort = 'all';
