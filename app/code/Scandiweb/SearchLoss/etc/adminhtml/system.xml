@@ -8,7 +8,7 @@
 
         <section id="searchloss" translate="label" type="text" sortOrder="100"
                  showInDefault="1" showInWebsite="1" showInStore="1">
-            <label>Search Loss</label>
+            <label>Search Loss Audit</label>
             <tab>scandiweb</tab>
             <resource>Scandiweb_SearchLoss::searchloss</resource>
 
