@@ -185,3 +185,24 @@ Before broader installation or marketplace-style packaging, review:
 - customer-facing documentation
 - compatibility matrix
 - production-safe install instructions
+
+## Performance testing note
+
+Local stress testing was completed using a removable `SLTEST` dataset in Magento's `search_query` table.
+
+Test summary:
+
+- 5,000 additional failed-search rows were inserted for stress testing.
+- The API response stayed capped to the prioritized findings set rather than returning every failed term.
+- The REST endpoint remained fast locally, responding in roughly 0.5 seconds during the 5,000-row test.
+- The response size stayed controlled at around 60 KB.
+- The stress rows were removed after testing.
+
+This supports the current MVP approach: Search Loss Audit should behave as a prioritized audit view, not a full raw export of every historical failed search.
+
+For larger production catalogues, the recommended approach is still:
+
+- rank failed searches first
+- deep-diagnose only the highest-priority findings
+- keep endpoint output capped
+- avoid returning every raw search row in the dashboard
