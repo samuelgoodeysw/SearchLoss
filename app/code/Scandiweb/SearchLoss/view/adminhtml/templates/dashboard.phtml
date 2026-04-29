@@ -121,7 +121,8 @@ function catalogEvidenceTooltip($label) {
 .searchloss-hero h1 { margin:0 0 8px; color:#fff; font-size:28px; font-weight:800; letter-spacing:-.02em; }
 .searchloss-hero p { margin:0; max-width:780px; color:#dbeafe; line-height:1.55; font-size:15px; }
 .searchloss-hero-pills { display:flex; flex-wrap:wrap; align-items:flex-start; gap:10px; margin-top:18px; }
-.searchloss-status { display:inline-flex; margin-top:0; padding:7px 10px; border:1px solid rgba(125,211,252,.28); background:rgba(14,165,233,.10); border-radius:999px; color:#bfdbfe; font-size:12px; font-weight:800; }
+.searchloss-status { display:inline-flex; align-items:center; gap:7px; margin-top:0; padding:7px 11px; border:1px solid rgba(45,212,191,.38); background:rgba(20,184,166,.14); border-radius:999px; color:#ccfbf1; font-size:12px; font-weight:850; cursor:default; }
+.searchloss-status::before { content:"✓"; display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; border-radius:999px; background:rgba(20,184,166,.22); color:#99f6e4; font-size:10px; font-weight:950; }
 .searchloss-periods { display:flex; gap:8px; flex-wrap:wrap; margin:0; justify-content:flex-end; }
 .searchloss-periods a { display:inline-block; padding:8px 12px; border:1px solid #d1d5db; border-radius:999px; text-decoration:none; font-size:13px; font-weight:700; }
 .searchloss-kpi-panel { background:#fff; border:1px solid #d7dce2; border-radius:18px; margin-bottom:18px; overflow:hidden; box-shadow:0 8px 20px rgba(15,23,42,.055); }
@@ -908,6 +909,163 @@ function catalogEvidenceTooltip($label) {
 /* searchloss hero logo responsive overrides end */
 
 
+
+.searchloss-audit-config {
+    position: relative;
+}
+
+.searchloss-audit-config summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 18px;
+    padding: 7px 12px;
+    border: 1px solid rgba(125,211,252,.34);
+    background: rgba(14,165,233,.12);
+    border-radius: 999px;
+    color: #dbeafe;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+    list-style: none;
+}
+
+.searchloss-audit-config summary::-webkit-details-marker {
+    display: none;
+}
+
+.searchloss-audit-config summary::after {
+    content: "⚙";
+    color: #93c5fd;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.searchloss-audit-config[open] summary {
+    border-color: rgba(147,197,253,.60);
+    background: rgba(37,99,235,.24);
+}
+
+.searchloss-audit-config-body {
+    position: absolute;
+    z-index: 240;
+    left: 0;
+    top: calc(100% + 12px);
+    width: min(620px, calc(100vw - 80px));
+    padding: 18px;
+    border: 1px solid rgba(148,163,184,.32);
+    border-radius: 18px;
+    background: #0f172a;
+    box-shadow: 0 24px 60px rgba(2,6,23,.36);
+    color: #e2e8f0;
+}
+
+.searchloss-audit-config-body h3 {
+    margin: 0 0 8px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 900;
+}
+
+.searchloss-audit-config-body p {
+    margin: 0 0 14px;
+    color: #cbd5e1;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.searchloss-audit-config-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.searchloss-audit-config-item {
+    padding: 13px 14px;
+    border: 1px solid rgba(148,163,184,.22);
+    border-radius: 14px;
+    background: rgba(15,23,42,.72);
+}
+
+.searchloss-audit-config-item strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #f8fafc;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.searchloss-audit-config-item code {
+    display: block;
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(2,6,23,.62);
+    color: #bfdbfe;
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.searchloss-audit-config-note {
+    margin-top: 14px;
+    padding: 11px 12px;
+    border: 1px solid rgba(45,212,191,.22);
+    border-radius: 12px;
+    background: rgba(20,184,166,.10);
+    color: #ccfbf1;
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1.45;
+}
+
+
+.searchloss-audit-config-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.searchloss-audit-config-save,
+.searchloss-audit-config-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 8px 13px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.searchloss-audit-config-save {
+    border: 1px solid rgba(96,165,250,.55);
+    background: rgba(37,99,235,.28);
+    color: #dbeafe;
+}
+
+.searchloss-audit-config-save[disabled] {
+    cursor: not-allowed;
+    opacity: .72;
+}
+
+.searchloss-audit-config-close {
+    border: 1px solid rgba(148,163,184,.42);
+    background: rgba(15,23,42,.82);
+    color: #e2e8f0;
+}
+
+.searchloss-audit-config-close:hover,
+.searchloss-audit-config-close:focus {
+    border-color: rgba(226,232,240,.62);
+    background: rgba(30,41,59,.92);
+    outline: none;
+}
+
 </style>
 
 <div class="searchloss-page">
@@ -939,6 +1097,46 @@ function catalogEvidenceTooltip($label) {
             </div>
         </div>
     </details>
+            <details class="searchloss-audit-config searchloss-audit-config--hero">
+                <summary>Configure audit</summary>
+                <div class="searchloss-audit-config-body">
+                    <h3>Configure audit</h3>
+                    <p>Customize how Search Loss Audit interprets catalogue evidence and filters noisy search terms. These settings are planned for the next hardening step.</p>
+
+                    <div class="searchloss-audit-config-grid">
+                        <div class="searchloss-audit-config-item">
+                            <strong>Product identifier attributes</strong>
+                            <p>Add Magento product attribute codes customers may search by, such as brand, MPN, alternate SKU, cross-reference, model, or OEM number.</p>
+                            <code>manufacturer, brand, mpn, part_number, alternate_sku, cross_reference, model, oem</code>
+                        </div>
+
+                        <div class="searchloss-audit-config-item">
+                            <strong>Ignored search terms</strong>
+                            <p>Exclude known test searches, internal checks, bot-like terms, or other noise from audit findings.</p>
+                            <code>test, asdf, qwerty, null, undefined</code>
+                        </div>
+
+                        <div class="searchloss-audit-config-item">
+                            <strong>Minimum failed searches</strong>
+                            <p>Hide one-off failed terms until they happen enough times to matter.</p>
+                            <code>Default: 1</code>
+                        </div>
+                    </div>
+
+                    <div class="searchloss-audit-config-note">
+                        These settings only change how the audit interprets evidence. They do not change products, categories, orders, checkout, storefront search behaviour, or customer data.
+                    </div>
+
+                    <div class="searchloss-audit-config-actions">
+                        <button type="button" class="searchloss-audit-config-save" disabled title="Configuration saving is the next hardening step.">
+                            Save Configuration
+                        </button>
+                        <button type="button" class="searchloss-audit-config-close">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </details>
         </div>
             <div class="searchloss-hero-brand">
             <img
@@ -1254,6 +1452,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     closeAuditGuideOnOutsideClick();
+
+    document.querySelectorAll('.searchloss-audit-config-close').forEach(function (button) {
+        button.addEventListener('click', function () {
+            var configPanel = button.closest('.searchloss-audit-config');
+            if (configPanel) {
+                configPanel.removeAttribute('open');
+            }
+        });
+    });
 
     function getMainRows() {
         return Array.prototype.slice.call(document.querySelectorAll('tr.searchloss-main-row'));
