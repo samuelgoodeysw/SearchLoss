@@ -1066,6 +1066,32 @@ function catalogEvidenceTooltip($label) {
     outline: none;
 }
 
+
+.searchloss-audit-config-form {
+    margin: 0;
+}
+
+.searchloss-audit-config-item textarea,
+.searchloss-audit-config-item input {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 8px;
+    padding: 9px 10px;
+    border: 1px solid rgba(148,163,184,.38);
+    border-radius: 10px;
+    background: rgba(2,6,23,.62);
+    color: #bfdbfe;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.searchloss-audit-config-item textarea:focus,
+.searchloss-audit-config-item input:focus {
+    border-color: rgba(147,197,253,.80);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(37,99,235,.22);
+}
+
 </style>
 
 <div class="searchloss-page">
@@ -1101,40 +1127,44 @@ function catalogEvidenceTooltip($label) {
                 <summary>Configure audit</summary>
                 <div class="searchloss-audit-config-body">
                     <h3>Configure audit</h3>
-                    <p>Customize how Search Loss Audit interprets catalogue evidence and filters noisy search terms. These settings are planned for the next hardening step.</p>
+                    <p>Customize how Search Loss Audit interprets catalogue evidence and filters noisy search terms.</p>
 
-                    <div class="searchloss-audit-config-grid">
-                        <div class="searchloss-audit-config-item">
-                            <strong>Product identifier attributes</strong>
-                            <p>Add Magento product attribute codes customers may search by, such as brand, MPN, alternate SKU, cross-reference, model, or OEM number.</p>
-                            <code>manufacturer, brand, mpn, part_number, alternate_sku, cross_reference, model, oem</code>
+                    <form class="searchloss-audit-config-form" method="post" action="<?= $block->escapeUrl($block->getAuditConfigSaveUrl()) ?>">
+                        <?= $block->getBlockHtml('formkey') ?>
+
+                        <div class="searchloss-audit-config-grid">
+                            <label class="searchloss-audit-config-item">
+                                <strong>Product identifier attributes</strong>
+                                <p>Add Magento product attribute codes customers may search by, such as brand, MPN, alternate SKU, cross-reference, model, or OEM number.</p>
+                                <textarea name="identity_attributes" rows="3"><?= $block->escapeHtml($block->getConfiguredIdentityAttributes()) ?></textarea>
+                            </label>
+
+                            <label class="searchloss-audit-config-item">
+                                <strong>Ignored search terms</strong>
+                                <p>Exclude known test searches, internal checks, bot-like terms, or other noise from audit findings.</p>
+                                <textarea name="ignored_terms" rows="3"><?= $block->escapeHtml($block->getConfiguredIgnoredTerms()) ?></textarea>
+                            </label>
+
+                            <label class="searchloss-audit-config-item">
+                                <strong>Minimum failed searches</strong>
+                                <p>Hide one-off failed terms until they happen enough times to matter.</p>
+                                <input type="number" name="minimum_popularity" min="1" value="<?= (int)$block->getConfiguredMinimumPopularity() ?>">
+                            </label>
                         </div>
 
-                        <div class="searchloss-audit-config-item">
-                            <strong>Ignored search terms</strong>
-                            <p>Exclude known test searches, internal checks, bot-like terms, or other noise from audit findings.</p>
-                            <code>test, asdf, qwerty, null, undefined</code>
+                        <div class="searchloss-audit-config-note">
+                            Unsaved changes will not be applied until you click Save Configuration. These settings only change how the audit interprets evidence. They do not change products, categories, orders, checkout, storefront search behaviour, or customer data.
                         </div>
 
-                        <div class="searchloss-audit-config-item">
-                            <strong>Minimum failed searches</strong>
-                            <p>Hide one-off failed terms until they happen enough times to matter.</p>
-                            <code>Default: 1</code>
+                        <div class="searchloss-audit-config-actions">
+                            <button type="submit" class="searchloss-audit-config-save">
+                                Save Configuration
+                            </button>
+                            <button type="button" class="searchloss-audit-config-close">
+                                Close
+                            </button>
                         </div>
-                    </div>
-
-                    <div class="searchloss-audit-config-note">
-                        These settings only change how the audit interprets evidence. They do not change products, categories, orders, checkout, storefront search behaviour, or customer data.
-                    </div>
-
-                    <div class="searchloss-audit-config-actions">
-                        <button type="button" class="searchloss-audit-config-save" disabled title="Configuration saving is the next hardening step.">
-                            Save Configuration
-                        </button>
-                        <button type="button" class="searchloss-audit-config-close">
-                            Close
-                        </button>
-                    </div>
+                    </form>
                 </div>
             </details>
         </div>

@@ -3,14 +3,58 @@
 namespace Scandiweb\SearchLoss\Model;
 
 use Magento\Framework\App\ResourceConnection;
+use Magento\Framework\App\Config\ScopeConfigInterface;
 
 class SearchLossDataProvider
 {
-    protected ResourceConnection $resource;
+    private const XML_PATH_IDENTITY_ATTRIBUTES = 'searchloss/audit/identity_attributes';
+    private const XML_PATH_IGNORED_TERMS = 'searchloss/audit/ignored_terms';
+    private const XML_PATH_MINIMUM_POPULARITY = 'searchloss/audit/minimum_popularity';
 
-    public function __construct(ResourceConnection $resource)
-    {
+    private const DEFAULT_IDENTITY_ATTRIBUTES = 'manufacturer,brand,mpn,part_number,partnumber,product_code,model,oem,oem_number,supplier,vendor';
+    private const DEFAULT_IGNORED_TERMS = 'test,testing,asdf,qwerty,lorem,ipsum,null,undefined';
+
+    protected ResourceConnection $resource;
+    protected ScopeConfigInterface $scopeConfig;
+
+    public function __construct(
+        ResourceConnection $resource,
+        ScopeConfigInterface $scopeConfig
+    ) {
         $this->resource = $resource;
+        $this->scopeConfig = $scopeConfig;
+    }
+
+    private function parseCsvConfig(?string $value): array
+    {
+        $items = array_map('trim', explode(',', (string)$value));
+
+        $items = array_filter($items, function ($item) {
+            return $item !== '';
+        });
+
+        return array_values(array_unique($items));
+    }
+
+    public function getConfiguredIdentityAttributes(): string
+    {
+        $value = (string)$this->scopeConfig->getValue(self::XML_PATH_IDENTITY_ATTRIBUTES);
+
+        return trim($value) !== '' ? $value : self::DEFAULT_IDENTITY_ATTRIBUTES;
+    }
+
+    public function getConfiguredIgnoredTerms(): string
+    {
+        $value = (string)$this->scopeConfig->getValue(self::XML_PATH_IGNORED_TERMS);
+
+        return trim($value) !== '' ? $value : self::DEFAULT_IGNORED_TERMS;
+    }
+
+    public function getConfiguredMinimumPopularity(): int
+    {
+        $value = (int)$this->scopeConfig->getValue(self::XML_PATH_MINIMUM_POPULARITY);
+
+        return max(1, $value);
     }
 
     private function applyDateFilter($select, string $period)
@@ -203,19 +247,11 @@ class SearchLossDataProvider
 
     private function getIdentityAttributeCodes(): array
     {
-        return [
-            'manufacturer',
-            'brand',
-            'mpn',
-            'part_number',
-            'partnumber',
-            'product_code',
-            'model',
-            'oem',
-            'oem_number',
-            'supplier',
-            'vendor',
-        ];
+        $configuredAttributes = $this->parseCsvConfig($this->getConfiguredIdentityAttributes());
+
+        return empty($configuredAttributes)
+            ? $this->parseCsvConfig(self::DEFAULT_IDENTITY_ATTRIBUTES)
+            : $configuredAttributes;
     }
 
     private function getExistingIdentityAttributes(): array
@@ -1324,7 +1360,17 @@ class SearchLossDataProvider
             return true;
         }
 
-        if (preg_match('/\b(test|testing|asdf|qwerty|lorem|ipsum|null|undefined)\b/i', $cleanTerm)) {
+        $ignoredTerms = $this->parseCsvConfig($this->getConfiguredIgnoredTerms());
+
+        foreach ($ignoredTerms as $ignoredTerm) {
+            $normalizedIgnoredTerm = strtolower(trim($ignoredTerm));
+
+            if ($normalizedIgnoredTerm !== '' && $cleanTerm === $normalizedIgnoredTerm) {
+                return true;
+            }
+        }
+
+        if (preg_match('/\b(testing|lorem|ipsum)\b/i', $cleanTerm)) {
             return true;
         }
 

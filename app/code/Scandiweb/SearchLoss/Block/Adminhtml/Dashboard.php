@@ -79,4 +79,24 @@ class Dashboard extends Template
 
         return $payload['failedSearchTerms'] ?? [];
     }
+    public function getAuditConfigSaveUrl(): string
+    {
+        return $this->getUrl('searchloss/config/save');
+    }
+
+    public function getConfiguredIdentityAttributes(): string
+    {
+        return $this->dataProvider->getConfiguredIdentityAttributes();
+    }
+
+    public function getConfiguredIgnoredTerms(): string
+    {
+        return $this->dataProvider->getConfiguredIgnoredTerms();
+    }
+
+    public function getConfiguredMinimumPopularity(): int
+    {
+        return $this->dataProvider->getConfiguredMinimumPopularity();
+    }
+
 }
