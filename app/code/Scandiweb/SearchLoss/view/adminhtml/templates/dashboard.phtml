@@ -1092,6 +1092,49 @@ function catalogEvidenceTooltip($label) {
     box-shadow: 0 0 0 2px rgba(37,99,235,.22);
 }
 
+
+/* Search Loss audit config modal interaction fixes */
+.searchloss-config-panel-open .searchloss-tooltip-bubble {
+    display: none !important;
+}
+
+.searchloss-audit-config[open] {
+    z-index: 260;
+}
+
+.searchloss-audit-config[open] .searchloss-audit-config-body {
+    z-index: 300;
+}
+
+.searchloss-audit-config-item input[type="number"]::-webkit-outer-spin-button,
+.searchloss-audit-config-item input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.searchloss-audit-config-item input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+
+.searchloss-audit-config-unsaved {
+    display: none;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(251,191,36,.36);
+    border-radius: 12px;
+    background: rgba(251,191,36,.12);
+    color: #fde68a;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.45;
+}
+
+.searchloss-audit-config-form.searchloss-audit-config-form--dirty .searchloss-audit-config-unsaved {
+    display: block;
+}
+
 </style>
 
 <div class="searchloss-page">
@@ -1154,6 +1197,10 @@ function catalogEvidenceTooltip($label) {
 
                         <div class="searchloss-audit-config-note">
                             Unsaved changes will not be applied until you click Save Configuration. These settings only change how the audit interprets evidence. They do not change products, categories, orders, checkout, storefront search behaviour, or customer data.
+                        </div>
+
+                        <div class="searchloss-audit-config-unsaved" aria-live="polite">
+                            You have unsaved changes. Closing this panel will keep your edits on this screen, but they will not be applied until you click Save Configuration.
                         </div>
 
                         <div class="searchloss-audit-config-actions">
@@ -1483,12 +1530,55 @@ document.addEventListener('DOMContentLoaded', function () {
 
     closeAuditGuideOnOutsideClick();
 
+    function updateAuditConfigOpenState() {
+        var hasOpenConfig = document.querySelector('.searchloss-audit-config[open]') !== null;
+        document.body.classList.toggle('searchloss-config-panel-open', hasOpenConfig);
+    }
+
+    document.querySelectorAll('.searchloss-audit-config').forEach(function (configPanel) {
+        configPanel.addEventListener('toggle', updateAuditConfigOpenState);
+    });
+
     document.querySelectorAll('.searchloss-audit-config-close').forEach(function (button) {
         button.addEventListener('click', function () {
             var configPanel = button.closest('.searchloss-audit-config');
             if (configPanel) {
                 configPanel.removeAttribute('open');
+                updateAuditConfigOpenState();
             }
+        });
+    });
+
+    updateAuditConfigOpenState();
+
+    document.querySelectorAll('.searchloss-audit-config-form').forEach(function (form) {
+        var initialSnapshot = new FormData(form);
+        var initialValues = {};
+
+        initialSnapshot.forEach(function (value, key) {
+            initialValues[key] = String(value);
+        });
+
+        function updateDirtyState() {
+            var currentSnapshot = new FormData(form);
+            var isDirty = false;
+
+            currentSnapshot.forEach(function (value, key) {
+                if (String(value) !== String(initialValues[key] || '')) {
+                    isDirty = true;
+                }
+            });
+
+            form.classList.toggle('searchloss-audit-config-form--dirty', isDirty);
+        }
+
+        form.querySelectorAll('input, textarea, select').forEach(function (field) {
+            field.addEventListener('input', updateDirtyState);
+            field.addEventListener('change', updateDirtyState);
+        });
+
+        form.addEventListener('submit', function () {
+            form.classList.remove('searchloss-audit-config-form--dirty');
         });
     });
 

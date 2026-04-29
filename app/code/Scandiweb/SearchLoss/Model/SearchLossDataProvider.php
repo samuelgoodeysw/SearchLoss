@@ -1405,10 +1405,13 @@ class SearchLossDataProvider
 
         $this->applyDateFilter($select, $period);
 
+        $minimumPopularity = $this->getConfiguredMinimumPopularity();
+
         $terms = array_values(array_filter(
             $connection->fetchAll($select),
-            function ($term) {
-                return !$this->isNoiseSearchTerm((string)$term['query_text']);
+            function ($term) use ($minimumPopularity) {
+                return !$this->isNoiseSearchTerm((string)$term['query_text'])
+                    && (int)$term['popularity'] >= $minimumPopularity;
             }
         ));
 
@@ -1518,10 +1521,13 @@ class SearchLossDataProvider
 
         $this->applyDateFilter($select, $period);
 
+        $minimumPopularity = $this->getConfiguredMinimumPopularity();
+
         $terms = array_values(array_filter(
             $connection->fetchAll($select),
-            function ($term) {
-                return !$this->isNoiseSearchTerm((string)$term['query_text']);
+            function ($term) use ($minimumPopularity) {
+                return !$this->isNoiseSearchTerm((string)$term['query_text'])
+                    && (int)$term['popularity'] >= $minimumPopularity;
             }
         ));
 
