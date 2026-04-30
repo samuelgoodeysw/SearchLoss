@@ -1722,13 +1722,13 @@ function catalogEvidenceTooltip($label) {
                 <table class="searchloss-table searchloss-low-engagement-table">
                     <thead>
                         <tr>
-                            <th>Search term</th>
-                            <th>Searches</th>
-                            <th>Product engagement</th>
-                            <th>Add-to-cart rate</th>
-                            <th>Purchase rate</th>
-                            <th>Weakness signal</th>
-                            <th>Recommended review</th>
+                            <th><?= tooltipLabel('Search term', 'The customer search term captured from GA4-style search engagement data.') ?></th>
+                            <th><?= tooltipLabel('Searches', 'How many times this term was searched in the reporting period.') ?></th>
+                            <th><?= tooltipLabel('Product engagement', 'The share of searches that led to product views. Low product engagement can suggest weak result relevance, unclear product matches, or poor ranking.') ?></th>
+                            <th><?= tooltipLabel('Add-to-cart rate', 'The share of searches that led to add-to-cart activity. Low add-to-cart after product views may point to product content, pricing, stock, fitment, or confidence issues.') ?></th>
+                            <th><?= tooltipLabel('Purchase rate', 'The share of searches that led to purchases. Low purchase rate after engagement may point to checkout, shipping, pricing, stock, or buying friction.') ?></th>
+                            <th><?= tooltipLabel('Weakness signal', 'The main engagement weakness detected from the search funnel.') ?></th>
+                            <th><?= tooltipLabel('Recommended review', 'Suggested review path based on the low-engagement signal. This is diagnostic only and does not change storefront behaviour.') ?></th>
                         </tr>
                     </thead>
                     <tbody>
