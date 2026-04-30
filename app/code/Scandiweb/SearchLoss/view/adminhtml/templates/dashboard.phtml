@@ -186,6 +186,8 @@ function catalogEvidenceTooltip($label) {
 .searchloss-kpi-panel-title h2 .searchloss-tooltip-bubble,
 .searchloss-money-actions-title h2 .searchloss-tooltip-bubble,
 .searchloss-section-header h2 .searchloss-tooltip-bubble {
+    z-index: 200;
+
     top:calc(100% + 10px);
     bottom:auto;
 }
@@ -333,11 +335,11 @@ function catalogEvidenceTooltip($label) {
 
 @media (max-width:1000px) { .searchloss-money-actions-grid { grid-template-columns:1fr; } }
 
-.searchloss-section { background:#fff; border:1px solid #d7dce2; border-radius:18px; margin-bottom:18px; overflow:hidden; box-shadow:0 8px 20px rgba(15,23,42,.06); }
-.searchloss-section-header { padding:16px 18px; border-bottom:1px solid #e5e7eb; background:#f8fafc; }
-.searchloss-section-head { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; }
-.searchloss-section-copy { flex:1; min-width:280px; }
-.searchloss-section-header h2 { margin:0; color:#0f172a; font-size:18px; font-weight:700; }
+.searchloss-section { background:#fff; border:1px solid #d7dce2; border-radius:18px; margin-bottom:18px; overflow:visible; box-shadow:0 8px 20px rgba(15,23,42,.06); }
+.searchloss-section-header { position:relative; z-index:5; padding:16px 18px; border-bottom:1px solid #e5e7eb; background:#f8fafc; overflow:visible; }
+.searchloss-section-head { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; overflow:visible; }
+.searchloss-section-copy { flex:1; min-width:280px; overflow:visible; }
+.searchloss-section-header h2 { position:relative; margin:0; color:#0f172a; font-size:18px; font-weight:700; overflow:visible; }
 .searchloss-section-header p { margin:6px 0 0; color:#64748b; font-size:13px; line-height:1.5; }
 .searchloss-filter-bar { display:grid; grid-template-columns:1.5fr .9fr 1.1fr 1.1fr auto auto auto; gap:10px; padding:14px 18px; border-bottom:1px solid #e5e7eb; background:#fff; align-items:end; }
 .searchloss-filter-field label { display:block; margin-bottom:6px; color:#64748b; font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
@@ -1135,6 +1137,153 @@ function catalogEvidenceTooltip($label) {
     display: block;
 }
 
+
+/* Search Loss low engagement section collapse polish */
+.searchloss-low-engagement-section > summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+.searchloss-low-engagement-section > summary::-webkit-details-marker {
+    display: none;
+}
+
+.searchloss-low-engagement-section > summary .searchloss-section-head::after {
+    content: "↓";
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-left: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    color: #64748b;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 900;
+    flex: 0 0 auto;
+}
+
+.searchloss-low-engagement-section[open] > summary .searchloss-section-head::after {
+    content: "↑";
+}
+
+.searchloss-section-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 5px 10px;
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+
+/* Search Loss audit table section collapse polish */
+.searchloss-audit-table-section > summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+.searchloss-audit-table-section > summary::-webkit-details-marker {
+    display: none;
+}
+
+.searchloss-audit-table-section > summary .searchloss-section-head::after {
+    content: "↓";
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-left: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    color: #64748b;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 900;
+    flex: 0 0 auto;
+}
+
+.searchloss-audit-table-section[open] > summary .searchloss-section-head::after {
+    content: "↑";
+}
+
+.searchloss-audit-table-section > summary:hover {
+    background: #f1f5f9;
+}
+
+.searchloss-section-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 5px 10px;
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+
+/* Search Loss audit table header tooltip anti-clipping fix */
+.searchloss-audit-table-section > summary .searchloss-tooltip-label {
+    position: relative;
+    z-index: 300;
+}
+
+.searchloss-audit-table-section > summary .searchloss-tooltip-bubble {
+    top: calc(100% + 10px);
+    left: 0;
+    z-index: 500;
+    width: 360px;
+    max-width: min(360px, calc(100vw - 80px));
+}
+
+.searchloss-audit-table-section > summary .searchloss-tooltip-bubble::after {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: 22px;
+    width: 10px;
+    height: 10px;
+    background: #0f172a;
+    transform: rotate(45deg);
+}
+
+.searchloss-failed-search-section {
+    margin-bottom: 28px;
+}
+
+.searchloss-failed-search-section > summary {
+    position: relative;
+    z-index: 20;
+}
+
+.searchloss-low-engagement-section {
+    position: relative;
+    z-index: 1;
+}
+
+
+/* Search Loss tooltip text rendering polish */
+.searchloss-tooltip-bubble {
+    font-weight: 700;
+    letter-spacing: 0;
+    font-variant-numeric: normal;
+    text-rendering: optimizeLegibility;
+}
+
 </style>
 
 <div class="searchloss-page">
@@ -1287,12 +1436,12 @@ function catalogEvidenceTooltip($label) {
         </details>
     <?php endif; ?>
 
-    <div class="searchloss-section">
-        <div class="searchloss-section-header">
+    <details class="searchloss-section searchloss-audit-table-section searchloss-failed-search-section">
+        <summary class="searchloss-section-header">
             <div class="searchloss-section-head">
                 <div class="searchloss-section-copy">
-                    <h2>Prioritized search findings</h2>
-                    <p>Highest-priority search findings ranked by demand, estimated demand value, diagnosis, and confidence.</p>
+                    <h2><?= tooltipLabel('Prioritized search findings', 'Magento-native failed-search audit. These are searches where customers searched and Magento returned zero results, ranked by demand, estimated demand value, diagnosis, and confidence.') ?></h2>
+                    <p>Highest-priority failed-search findings ranked by demand, estimated demand value, diagnosis, and confidence.</p>
                 </div>
 
                 <div class="searchloss-periods">
@@ -1303,7 +1452,7 @@ function catalogEvidenceTooltip($label) {
                     <a href="?period=365" style="<?= activeStyle($currentPeriod, '365') ?>">Last year</a>
                 </div>
             </div>
-        </div>
+        </summary>
 
         <?php if (empty($rankedTerms)): ?>
             <div class="searchloss-empty">No failed search terms were found for the selected period.</div>
@@ -1497,7 +1646,69 @@ function catalogEvidenceTooltip($label) {
                 </table>
             </div>
         <?php endif; ?>
-    </div>
+    </details>
+
+    <?php $lowEngagementTerms = $block->getLowEngagementSearchTerms(); ?>
+
+    <details class="searchloss-section searchloss-audit-table-section searchloss-low-engagement-section">
+        <summary class="searchloss-section-header">
+            <div class="searchloss-section-head">
+                <div class="searchloss-section-copy">
+                    <h2><?= tooltipLabel('Searches With Low Engagement', 'Analytics-powered diagnostic for searches that returned results but did not meaningfully move customers forward.') ?></h2>
+                    <p>Searches that returned results, but showed weak product engagement, add-to-cart, or purchase behaviour.</p>
+                </div>
+                <div class="searchloss-section-badge">
+                    <?= number_format(count($lowEngagementTerms)) ?> findings
+                </div>
+            </div>
+        </summary>
+
+        <?php if (empty($lowEngagementTerms)): ?>
+            <div class="searchloss-empty">
+                No low-engagement search findings were found. This may mean GA4 search data is not available yet, or current GA4 rows do not show clear search friction.
+            </div>
+        <?php else: ?>
+            <div class="searchloss-table-hint">
+                <strong>Phase 2:</strong> This uses GA4-style search engagement data. It is diagnostic only and does not change storefront search, checkout, catalogue data, or customer workflows.
+            </div>
+
+            <div class="searchloss-table-wrap">
+                <table class="searchloss-table searchloss-low-engagement-table">
+                    <thead>
+                        <tr>
+                            <th>Search term</th>
+                            <th>Searches</th>
+                            <th>Product engagement</th>
+                            <th>Add-to-cart rate</th>
+                            <th>Purchase rate</th>
+                            <th>Weakness signal</th>
+                            <th>Recommended review</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($lowEngagementTerms as $term): ?>
+                            <tr>
+                                <td><span class="searchloss-term"><?= $block->escapeHtml($term['term'] ?? '') ?></span></td>
+                                <td><?= number_format((int)($term['searches'] ?? 0)) ?></td>
+                                <td><?= number_format((float)($term['productEngagementRate'] ?? 0), 2) ?>%</td>
+                                <td><?= number_format((float)($term['addToCartRate'] ?? 0), 2) ?>%</td>
+                                <td><?= number_format((float)($term['purchaseRate'] ?? 0), 2) ?>%</td>
+                                <td>
+                                    <span class="searchloss-pill" style="background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;">
+                                        <?= $block->escapeHtml($term['weaknessSignal'] ?? 'Needs review') ?>
+                                    </span>
+                                </td>
+                                <td class="searchloss-action">
+                                    <?= $block->escapeHtml($term['recommendedReview'] ?? 'Review GA4 search engagement and Magento catalogue evidence.') ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </details>
+
 </div>
 
 

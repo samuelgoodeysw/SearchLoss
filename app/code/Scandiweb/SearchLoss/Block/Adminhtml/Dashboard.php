@@ -99,4 +99,15 @@ class Dashboard extends Template
         return $this->dataProvider->getConfiguredMinimumPopularity();
     }
 
+    public function getLowEngagementSearchTerms(): array
+    {
+        $payload = $this->getDashboardPayload();
+
+        $terms = $payload['lowEngagementSearchTerms'] ?? [];
+
+        return array_values(array_filter($terms, function ($term) {
+            return !empty($term['isLowEngagementFinding']);
+        }));
+    }
+
 }
