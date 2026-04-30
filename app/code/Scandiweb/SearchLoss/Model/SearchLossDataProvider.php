@@ -1470,6 +1470,142 @@ class SearchLossDataProvider
         );
     }
 
+    public function getLowEngagementSearchTerms(): array
+    {
+        $connection = $this->resource->getConnection();
+
+        $rows = $connection->fetchAll(
+            $connection->select()
+                ->from('scandiweb_searchloss_ga4_term', [
+                    'search_term',
+                    'searches' => new \Zend_Db_Expr('SUM(searches)'),
+                    'product_views' => new \Zend_Db_Expr('SUM(product_views)'),
+                    'add_to_carts' => new \Zend_Db_Expr('SUM(add_to_carts)'),
+                    'purchases' => new \Zend_Db_Expr('SUM(purchases)'),
+                    'revenue' => new \Zend_Db_Expr('SUM(revenue)'),
+                    'latest_report_date' => new \Zend_Db_Expr('MAX(report_date)')
+                ])
+                ->group('search_term')
+                ->order('searches DESC')
+                ->limit(20)
+        );
+
+        $terms = [];
+
+        foreach ($rows as $row) {
+            $searches = max(1, (int)$row['searches']);
+            $productViews = (int)$row['product_views'];
+            $addToCarts = (int)$row['add_to_carts'];
+            $purchases = (int)$row['purchases'];
+            $revenue = (float)$row['revenue'];
+
+            $productEngagementRate = round(($productViews / $searches) * 100, 2);
+            $addToCartRate = round(($addToCarts / $searches) * 100, 2);
+            $purchaseRate = round(($purchases / $searches) * 100, 2);
+
+            $weaknessSignal = $this->getLowEngagementSignal(
+                $searches,
+                $productEngagementRate,
+                $addToCartRate,
+                $purchaseRate,
+                $revenue
+            );
+
+            $terms[] = [
+                'term' => (string)$row['search_term'],
+                'searches' => $searches,
+                'productViews' => $productViews,
+                'addToCarts' => $addToCarts,
+                'purchases' => $purchases,
+                'revenue' => round($revenue, 2),
+                'productEngagementRate' => $productEngagementRate,
+                'addToCartRate' => $addToCartRate,
+                'purchaseRate' => $purchaseRate,
+                'weaknessSignal' => $weaknessSignal,
+                'isLowEngagementFinding' => $this->isLowEngagementFinding($weaknessSignal),
+                'diagnosis' => $this->getLowEngagementDiagnosis($weaknessSignal),
+                'recommendedReview' => $this->getLowEngagementRecommendedReview($weaknessSignal),
+            ];
+        }
+
+        return $terms;
+    }
+
+    private function getLowEngagementSignal(
+        int $searches,
+        float $productEngagementRate,
+        float $addToCartRate,
+        float $purchaseRate,
+        float $revenue
+    ): string {
+        if ($searches >= 20 && $productEngagementRate < 40) {
+            return 'High searches, low product engagement';
+        }
+
+        if ($productEngagementRate >= 40 && $addToCartRate < 10) {
+            return 'Product views, low add-to-cart';
+        }
+
+        if ($addToCartRate >= 10 && $purchaseRate < 3) {
+            return 'Add-to-cart, low purchase';
+        }
+
+        if ($revenue > 0 && $purchaseRate >= 5) {
+            return 'Healthy revenue signal';
+        }
+
+        return 'Needs review';
+    }
+
+    private function isLowEngagementFinding(string $weaknessSignal): bool
+    {
+        return in_array($weaknessSignal, [
+            'High searches, low product engagement',
+            'Product views, low add-to-cart',
+            'Add-to-cart, low purchase',
+        ], true);
+    }
+
+    private function getLowEngagementDiagnosis(string $weaknessSignal): string
+    {
+        switch ($weaknessSignal) {
+            case 'High searches, low product engagement':
+                return 'Customers search for this term, but do not appear to engage strongly with the returned products. Results may be irrelevant, unclear, poorly ranked, or difficult to refine.';
+
+            case 'Product views, low add-to-cart':
+                return 'Customers reach product pages after searching, but do not add to cart often. Review product detail quality, price, stock, fitment, confidence signals, and product-page clarity.';
+
+            case 'Add-to-cart, low purchase':
+                return 'Customers show buying intent after searching, but purchases remain low. Review checkout, shipping, account, pricing, availability, or quote-request friction.';
+
+            case 'Healthy revenue signal':
+                return 'This search term appears to drive some commercial value. It may not be a loss item, but it can still be monitored or optimized if strategically important.';
+
+            default:
+                return 'This search term has mixed engagement signals and should be reviewed manually before deciding whether it represents search friction.';
+        }
+    }
+
+    private function getLowEngagementRecommendedReview(string $weaknessSignal): string
+    {
+        switch ($weaknessSignal) {
+            case 'High searches, low product engagement':
+                return 'Review search result relevance, ranking, filters, synonyms, product names, and whether the returned products match customer language.';
+
+            case 'Product views, low add-to-cart':
+                return 'Review product content, pricing, stock/salability, fitment information, images, delivery confidence, and product-page calls to action.';
+
+            case 'Add-to-cart, low purchase':
+                return 'Review checkout, shipping, payment, account requirements, quote flow, stock availability, and any purchase blockers after add-to-cart.';
+
+            case 'Healthy revenue signal':
+                return 'Monitor this term and consider optimizing ranking or merchandising if it is commercially important.';
+
+            default:
+                return 'Review GA4 tracking quality, search result quality, catalogue evidence, and whether this term needs a more specific diagnosis.';
+        }
+    }
+
     public function getOpportunityInsights(): array
     {
         $connection = $this->resource->getConnection();
@@ -1636,6 +1772,10 @@ class SearchLossDataProvider
             [
                 'key' => 'failedSearchTerms',
                 'value' => $externalTerms
+            ],
+            [
+                'key' => 'lowEngagementSearchTerms',
+                'value' => $this->getLowEngagementSearchTerms()
             ]
         ];
     }

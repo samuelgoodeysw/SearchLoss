@@ -5,4 +5,13 @@
     <preference for="Scandiweb\SearchLoss\Api\SearchLossInterface"
                 type="Scandiweb\SearchLoss\Model\SearchLoss" />
 
+
+    <type name="Magento\Framework\Console\CommandList">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="searchloss_ga4_sync" xsi:type="object">Scandiweb\SearchLoss\Console\Command\Ga4SyncCommand</item>
+            </argument>
+        </arguments>
+    </type>
+
 </config>
