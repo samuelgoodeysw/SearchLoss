@@ -399,6 +399,7 @@ function catalogEvidenceTooltip($label) {
 .searchloss-pill { display:inline-flex; align-items:center; border:1px solid #cbd5e1; border-radius:999px; padding:3px 8px; font-size:11px; font-weight:800; white-space:nowrap; }
 .searchloss-action { min-width:320px; color:#475569; }
 .searchloss-diagnosis { min-width:260px; max-width:360px; }
+
 .searchloss-diagnosis-issue { color:#475569; font-size:13px; font-weight:400; line-height:1.45; margin-bottom:7px; }
 .searchloss-meta-pills { display:flex; flex-wrap:wrap; gap:5px; }
 .searchloss-meta-pill { display:inline-flex; align-items:center; border-radius:999px; padding:3px 7px; font-size:10.5px; font-weight:700; line-height:1.2; border:1px solid #dbe2ea; background:#f8fafc; color:#475569; }
@@ -411,6 +412,40 @@ function catalogEvidenceTooltip($label) {
 .searchloss-table th:nth-child(5) { width:25%; }
 .searchloss-table th:nth-child(6) { width:27%; }
 .searchloss-table th:nth-child(7) { width:6%; }
+
+.searchloss-low-engagement-section .searchloss-table-wrap {
+    overflow-x: visible;
+}
+
+.searchloss-low-engagement-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.searchloss-low-engagement-table th,
+.searchloss-low-engagement-table td {
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+}
+
+.searchloss-low-engagement-table th:nth-child(1) { width: 13%; }
+.searchloss-low-engagement-table th:nth-child(2) { width: 7%; }
+.searchloss-low-engagement-table th:nth-child(3) { width: 12%; }
+.searchloss-low-engagement-table th:nth-child(4) { width: 11%; }
+.searchloss-low-engagement-table th:nth-child(5) { width: 10%; }
+.searchloss-low-engagement-table th:nth-child(6) { width: 22%; }
+.searchloss-low-engagement-table th:nth-child(7) { width: 25%; }
+
+.searchloss-low-engagement-table .searchloss-action {
+    min-width: 0;
+}
+
+.searchloss-low-engagement-table .searchloss-pill {
+    white-space: normal;
+    text-align: left;
+    line-height: 1.35;
+}
 .searchloss-empty { padding:22px; color:#64748b; font-size:13px; }
 .searchloss-main-row { cursor:pointer; }
 .searchloss-main-row:hover td { background:#f8fafc; }
@@ -1100,12 +1135,25 @@ function catalogEvidenceTooltip($label) {
     display: none !important;
 }
 
+.searchloss-config-panel-open .searchloss-hero {
+    z-index: 5000;
+}
+
+.searchloss-config-panel-open .searchloss-section,
+.searchloss-config-panel-open .searchloss-section-header,
+.searchloss-config-panel-open .searchloss-kpi-panel,
+.searchloss-config-panel-open .searchloss-kpi-panel *,
+.searchloss-config-panel-open .searchloss-money-actions {
+    z-index: 1 !important;
+}
+
 .searchloss-audit-config[open] {
-    z-index: 260;
+    position: relative;
+    z-index: 5100;
 }
 
 .searchloss-audit-config[open] .searchloss-audit-config-body {
-    z-index: 300;
+    z-index: 5200;
 }
 
 .searchloss-audit-config-item input[type="number"]::-webkit-outer-spin-button,
