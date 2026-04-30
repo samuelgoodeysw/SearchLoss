@@ -1489,9 +1489,9 @@ function catalogEvidenceTooltip($label) {
             <div class="searchloss-help">Failed search demand.</div>
         </div>
         <div class="searchloss-card">
-            <div class="searchloss-label"><?= tooltipLabel('Est. Demand Value', 'Directional estimate based on failed search demand, average order value, and search-to-order rate. This highlights potential demand, not guaranteed lost revenue.') ?></div>
+            <div class="searchloss-label"><?= tooltipLabel('Est. Demand Value', 'Failed-search-only estimate based on zero-result search demand, average order value, and search-to-order rate. This highlights potential demand from searches that returned no results; it does not include low-engagement searches and is not guaranteed lost revenue.') ?></div>
             <div class="searchloss-value"><?= money($summary['lost_revenue']) ?></div>
-            <div class="searchloss-help">Estimated demand value.</div>
+            <div class="searchloss-help">Failed-search demand estimate.</div>
         </div>
         <div class="searchloss-card">
             <div class="searchloss-label"><?= tooltipLabel('AOV', 'Average order value calculated from Magento orders, excluding cancelled orders.') ?></div>
@@ -1610,7 +1610,7 @@ function catalogEvidenceTooltip($label) {
                         <tr>
                             <th><button type="button" class="searchloss-sort-button" data-sort-key="term"><?= tooltipLabel('Term', 'The exact words customers searched for.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
                             <th><button type="button" class="searchloss-sort-button" data-sort-key="searches"><?= tooltipLabel('Searches', 'How many times customers searched this term in the selected period.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
-                            <th><button type="button" class="searchloss-sort-button" data-sort-key="revenue"><?= tooltipLabel('Est. Demand Value', 'Directional estimate based on failed search volume, average order value, and search-to-order rate. This highlights potential demand, not guaranteed lost revenue.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
+                            <th><button type="button" class="searchloss-sort-button" data-sort-key="revenue"><?= tooltipLabel('Est. Demand Value', 'Failed-search-only estimate based on zero-result search volume, average order value, and search-to-order rate. This does not include low-engagement searches and is not guaranteed lost revenue.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
                             <th><button type="button" class="searchloss-sort-button" data-sort-key="priority"><?= tooltipLabel('Priority', 'High priority terms should usually be reviewed first.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
                             <th><button type="button" class="searchloss-sort-button" data-sort-key="issue"><?= tooltipLabel('Diagnosis', 'Combined view of likely issue type, fix effort, and confidence.') ?> <span class="searchloss-sort-indicator">↕</span></button></th>
                             <th><?= tooltipLabel('Recommended Next Step', 'Recommended next step based on the diagnosis and Magento evidence.') ?></th>
