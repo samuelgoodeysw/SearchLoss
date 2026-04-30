@@ -6,7 +6,6 @@ $lowEngagementTerms = $block->getLowEngagementSearchTerms();
 $topOpportunity = $rankedTerms[0] ?? null;
 $topMoneyActions = [];
 $zeroResultRate = 0;
-$allSearchFindings = [];
 
 foreach ($rankedTerms as $term) {
     $bucket = (string)($term['fixEffortBucket'] ?? 'Manual review');
@@ -31,43 +30,6 @@ usort($topMoneyActions, function ($a, $b) {
 
 $topMoneyActions = array_slice($topMoneyActions, 0, 3);
 
-foreach ($rankedTerms as $term) {
-    $allSearchFindings[] = [
-        'type' => 'Failed search',
-        'term' => (string)($term['term'] ?? ''),
-        'searches' => (int)($term['count'] ?? 0),
-        'mainSignal' => (string)($term['fixType'] ?? 'Zero results'),
-        'commercialSignal' => money($term['lostRevenue'] ?? 0) . ' est. demand value',
-        'recommendedNextStep' => (string)($term['shortSuggestedAction'] ?? $term['suggestedFix'] ?? 'Review Magento catalogue and search configuration.'),
-        'score' => ((float)($term['lostRevenue'] ?? 0) * 100) + ((int)($term['count'] ?? 0) * 10),
-    ];
-}
-
-foreach ($lowEngagementTerms as $term) {
-    if (empty($term['isLowEngagementFinding'])) {
-        continue;
-    }
-
-    $purchaseRate = (float)($term['purchaseRate'] ?? 0);
-    $addToCartRate = (float)($term['addToCartRate'] ?? 0);
-    $productEngagementRate = (float)($term['productEngagementRate'] ?? 0);
-
-    $allSearchFindings[] = [
-        'type' => 'Low engagement search',
-        'term' => (string)($term['term'] ?? ''),
-        'searches' => (int)($term['searches'] ?? 0),
-        'mainSignal' => (string)($term['weaknessSignal'] ?? 'Low engagement'),
-        'commercialSignal' => number_format($productEngagementRate, 1) . '% product engagement · ' . number_format($addToCartRate, 1) . '% add-to-cart · ' . number_format($purchaseRate, 1) . '% purchase',
-        'recommendedNextStep' => (string)($term['recommendedReview'] ?? 'Review GA4 search engagement and Magento catalogue evidence.'),
-        'score' => ((int)($term['searches'] ?? 0) * 10) + max(0, 100 - $productEngagementRate) + max(0, 25 - $addToCartRate) + max(0, 10 - $purchaseRate),
-    ];
-}
-
-usort($allSearchFindings, function ($a, $b) {
-    return ($b['score'] ?? 0) <=> ($a['score'] ?? 0);
-});
-
-$allSearchFindings = array_slice($allSearchFindings, 0, 20);
 
 if (($summary['failed_searches'] ?? 0) > 0 && method_exists($block, 'getSearchData')) {
     $searchData = $block->getSearchData();
@@ -487,38 +449,6 @@ function catalogEvidenceTooltip($label) {
     line-height: 1.35;
 }
 
-.searchloss-all-findings-section .searchloss-table-wrap {
-    overflow-x: visible;
-}
-
-.searchloss-all-findings-table {
-    table-layout: fixed;
-    width: 100%;
-}
-
-.searchloss-all-findings-table th,
-.searchloss-all-findings-table td {
-    white-space: normal;
-    word-break: normal;
-    overflow-wrap: break-word;
-}
-
-.searchloss-all-findings-table th:nth-child(1) { width: 13%; }
-.searchloss-all-findings-table th:nth-child(2) { width: 13%; }
-.searchloss-all-findings-table th:nth-child(3) { width: 7%; }
-.searchloss-all-findings-table th:nth-child(4) { width: 20%; }
-.searchloss-all-findings-table th:nth-child(5) { width: 20%; }
-.searchloss-all-findings-table th:nth-child(6) { width: 27%; }
-
-.searchloss-all-findings-table .searchloss-action {
-    min-width: 0;
-}
-
-.searchloss-all-findings-table .searchloss-pill {
-    white-space: normal;
-    text-align: left;
-    line-height: 1.35;
-}
 .searchloss-empty { padding:22px; color:#64748b; font-size:13px; }
 .searchloss-main-row { cursor:pointer; }
 .searchloss-main-row:hover td { background:#f8fafc; }
@@ -1574,67 +1504,6 @@ function catalogEvidenceTooltip($label) {
             <div class="searchloss-help">Used for revenue modeling.</div>
         </div>
         </div>
-    </details>
-
-    <details class="searchloss-section searchloss-audit-table-section searchloss-all-findings-section">
-        <summary class="searchloss-section-header">
-            <div class="searchloss-section-head">
-                <div class="searchloss-section-copy">
-                    <h2><?= tooltipLabel('All Search Findings — Top 20', 'Combined priority view across failed searches and low-engagement searches. Use this as the starting point for the audit.') ?></h2>
-                    <p>Top combined search issues across zero-result searches and low-engagement searches.</p>
-                </div>
-                <div class="searchloss-section-badge">
-                    <?= number_format(count($allSearchFindings)) ?> findings
-                </div>
-            </div>
-        </summary>
-
-        <?php if (empty($allSearchFindings)): ?>
-            <div class="searchloss-empty">No search findings were found for the selected data.</div>
-        <?php else: ?>
-            <div class="searchloss-table-hint">
-                <strong>Start here:</strong> This combines failed-search and low-engagement findings into one prioritized review list. It is diagnostic only and does not change storefront search, checkout, catalogue data, or customer workflows.
-            </div>
-
-            <div class="searchloss-table-wrap">
-                <table class="searchloss-table searchloss-all-findings-table">
-                    <thead>
-                        <tr>
-                            <th><?= tooltipLabel('Finding type', 'Shows whether this is a zero-result failed search or a low-engagement search where results appeared but customers did not move forward.') ?></th>
-                            <th><?= tooltipLabel('Search term', 'The customer search term that should be reviewed.') ?></th>
-                            <th><?= tooltipLabel('Searches', 'How many times this search term appeared in the available reporting data.') ?></th>
-                            <th><?= tooltipLabel('Main signal', 'The main reason this search was flagged for review.') ?></th>
-                            <th><?= tooltipLabel('Commercial signal', 'Directional value or engagement signal used to help prioritize the finding.') ?></th>
-                            <th><?= tooltipLabel('Recommended next step', 'Suggested review path based on the failed-search or low-engagement signal.') ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($allSearchFindings as $finding): ?>
-                            <?php
-                                $type = (string)($finding['type'] ?? 'Search finding');
-                                $typeStyle = $type === 'Failed search'
-                                    ? 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;'
-                                    : 'background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;';
-                            ?>
-                            <tr>
-                                <td>
-                                    <span class="searchloss-pill" style="<?= $typeStyle ?>">
-                                        <?= $block->escapeHtml($type) ?>
-                                    </span>
-                                </td>
-                                <td><span class="searchloss-term"><?= $block->escapeHtml($finding['term'] ?? '') ?></span></td>
-                                <td><?= number_format((int)($finding['searches'] ?? 0)) ?></td>
-                                <td><?= $block->escapeHtml($finding['mainSignal'] ?? 'Needs review') ?></td>
-                                <td><?= $block->escapeHtml($finding['commercialSignal'] ?? 'Review signal') ?></td>
-                                <td class="searchloss-action">
-                                    <?= $block->escapeHtml($finding['recommendedNextStep'] ?? 'Review this search finding.') ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        <?php endif; ?>
     </details>
 
     <?php if (!empty($topMoneyActions)): ?>
