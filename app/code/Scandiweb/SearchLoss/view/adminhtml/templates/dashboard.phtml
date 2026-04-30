@@ -1284,6 +1284,52 @@ function catalogEvidenceTooltip($label) {
     text-rendering: optimizeLegibility;
 }
 
+
+/* Search Loss KPI tooltip clipping fix */
+.searchloss-kpi-panel,
+.searchloss-kpi-panel summary,
+.searchloss-grid,
+.searchloss-card {
+    overflow: visible;
+}
+
+.searchloss-card {
+    position: relative;
+}
+
+.searchloss-card .searchloss-tooltip-label {
+    position: relative;
+    z-index: 300;
+}
+
+.searchloss-card .searchloss-tooltip-bubble {
+    top: calc(100% + 10px);
+    right: 0;
+    left: auto;
+    z-index: 700;
+    width: 340px;
+    max-width: min(340px, calc(100vw - 80px));
+    white-space: normal;
+    word-break: normal;
+}
+
+.searchloss-card .searchloss-tooltip-bubble::after {
+    left: auto;
+    right: 18px;
+}
+
+
+/* Search Loss KPI first-card tooltip left-edge fix */
+.searchloss-grid .searchloss-card:first-child .searchloss-tooltip-bubble {
+    left: 0;
+    right: auto;
+}
+
+.searchloss-grid .searchloss-card:first-child .searchloss-tooltip-bubble::after {
+    left: 18px;
+    right: auto;
+}
+
 </style>
 
 <div class="searchloss-page">
