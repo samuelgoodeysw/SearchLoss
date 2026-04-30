@@ -121,7 +121,8 @@ function catalogEvidenceTooltip($label) {
 .searchloss-hero h1 { margin:0 0 8px; color:#fff; font-size:28px; font-weight:800; letter-spacing:-.02em; }
 .searchloss-hero p { margin:0; max-width:780px; color:#dbeafe; line-height:1.55; font-size:15px; }
 .searchloss-hero-pills { display:flex; flex-wrap:wrap; align-items:flex-start; gap:10px; margin-top:18px; }
-.searchloss-status { display:inline-flex; margin-top:0; padding:7px 10px; border:1px solid rgba(125,211,252,.28); background:rgba(14,165,233,.10); border-radius:999px; color:#bfdbfe; font-size:12px; font-weight:800; }
+.searchloss-status { display:inline-flex; align-items:center; gap:7px; margin-top:0; padding:7px 11px; border:1px solid rgba(45,212,191,.38); background:rgba(20,184,166,.14); border-radius:999px; color:#ccfbf1; font-size:12px; font-weight:850; cursor:default; }
+.searchloss-status::before { content:"✓"; display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; border-radius:999px; background:rgba(20,184,166,.22); color:#99f6e4; font-size:10px; font-weight:950; }
 .searchloss-periods { display:flex; gap:8px; flex-wrap:wrap; margin:0; justify-content:flex-end; }
 .searchloss-periods a { display:inline-block; padding:8px 12px; border:1px solid #d1d5db; border-radius:999px; text-decoration:none; font-size:13px; font-weight:700; }
 .searchloss-kpi-panel { background:#fff; border:1px solid #d7dce2; border-radius:18px; margin-bottom:18px; overflow:hidden; box-shadow:0 8px 20px rgba(15,23,42,.055); }
@@ -138,39 +139,91 @@ function catalogEvidenceTooltip($label) {
 .searchloss-label { color:#64748b; font-size:11px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
 .searchloss-value { margin-top:10px; color:#020617; font-size:30px; font-weight:900; letter-spacing:-.035em; }
 .searchloss-help { margin-top:7px; color:#64748b; font-size:13px; line-height:1.45; }
-.searchloss-tooltip-label { display:inline-flex; align-items:center; gap:6px; position:relative; vertical-align:middle; }
-.searchloss-tooltip-icon { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border:1px solid #cbd5e1; border-radius:999px; color:#64748b; background:#fff; font-size:11px; font-weight:900; line-height:1; cursor:help; flex:0 0 auto; }
+.searchloss-tooltip-label { display:inline-flex; align-items:center; gap:7px; position:relative; vertical-align:middle; overflow:visible; }
+.searchloss-tooltip-icon { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border:1px solid #cbd5e1; border-radius:999px; color:#64748b; background:#fff; font-size:11px; font-weight:900; line-height:1; cursor:help; flex:0 0 auto; }
 .searchloss-tooltip-icon:hover,
 .searchloss-tooltip-icon:focus { border-color:#93c5fd; color:#1d4ed8; background:#eff6ff; outline:none; }
 .searchloss-tooltip-bubble {
     display:none;
     position:absolute;
-    z-index:50;
-    left:0;
-    top:24px;
-    width:240px;
-    max-width:240px;
-    padding:10px 11px;
-    border:1px solid #cbd5e1;
+    z-index:500;
+    left:50%;
+    bottom:calc(100% + 10px);
+    transform:translateX(-50%);
+    width:max-content;
+    min-width:220px;
+    max-width:300px;
+    padding:11px 13px;
+    border:1px solid #1e293b;
     border-radius:10px;
     background:#0f172a;
-    color:#e2e8f0;
-    box-shadow:0 14px 30px rgba(15,23,42,.22);
+    color:#f8fafc;
+    box-shadow:0 16px 34px rgba(15,23,42,.28);
     font-size:12px;
-    font-weight:600;
+    font-weight:650;
     letter-spacing:0;
     line-height:1.45;
     text-transform:none;
     white-space:normal;
-    word-break:break-word;
-    overflow-wrap:anywhere;
+    word-break:normal;
+    overflow-wrap:break-word;
+    text-align:left;
+    pointer-events:none;
+}
+.searchloss-tooltip-bubble::after {
+    content:"";
+    position:absolute;
+    left:50%;
+    top:100%;
+    transform:translateX(-50%);
+    border:6px solid transparent;
+    border-top-color:#0f172a;
 }
 .searchloss-tooltip-label:hover .searchloss-tooltip-bubble,
 .searchloss-tooltip-icon:focus + .searchloss-tooltip-bubble { display:block; }
-.searchloss-table th .searchloss-tooltip-bubble { top:22px; }
+
+/* Section headings sit near the top of panels, so open their help text below. */
+.searchloss-kpi-panel-title h2 .searchloss-tooltip-bubble,
+.searchloss-money-actions-title h2 .searchloss-tooltip-bubble,
+.searchloss-section-header h2 .searchloss-tooltip-bubble {
+    z-index: 200;
+
+    top:calc(100% + 10px);
+    bottom:auto;
+}
+.searchloss-kpi-panel-title h2 .searchloss-tooltip-bubble::after,
+.searchloss-money-actions-title h2 .searchloss-tooltip-bubble::after,
+.searchloss-section-header h2 .searchloss-tooltip-bubble::after {
+    top:auto;
+    bottom:100%;
+    border-top-color:transparent;
+    border-bottom-color:#0f172a;
+}
+
+/* Table/filter headers need compact downward tooltips so they do not cover controls awkwardly. */
+.searchloss-table th .searchloss-tooltip-bubble,
+.searchloss-filters .searchloss-tooltip-bubble {
+    top:calc(100% + 8px);
+    bottom:auto;
+    left:0;
+    transform:none;
+}
+.searchloss-table th .searchloss-tooltip-bubble::after,
+.searchloss-filters .searchloss-tooltip-bubble::after {
+    top:auto;
+    bottom:100%;
+    left:14px;
+    transform:none;
+    border-top-color:transparent;
+    border-bottom-color:#0f172a;
+}
 .searchloss-table th:nth-last-child(-n+4) .searchloss-tooltip-bubble {
     left:auto;
     right:0;
+}
+.searchloss-table th:nth-last-child(-n+4) .searchloss-tooltip-bubble::after {
+    left:auto;
+    right:14px;
 }
 .searchloss-insights { display:grid; grid-template-columns:repeat(4,minmax(220px,1fr)); gap:14px; margin-bottom:18px; }
 .searchloss-insight { background:#fff; border:1px solid #d7dce2; border-radius:18px; padding:20px 22px; box-shadow:0 10px 24px rgba(15,23,42,.055); min-height:100%; }
@@ -234,13 +287,59 @@ function catalogEvidenceTooltip($label) {
     z-index: 120;
     bottom: auto;
 }
+
+/* Tooltip positioning fix: keep bubbles inside the Magento admin content area. */
+.searchloss-tooltip-bubble {
+    left:0;
+    right:auto;
+    top:calc(100% + 10px);
+    bottom:auto;
+    transform:none;
+    max-width:320px;
+}
+
+.searchloss-tooltip-bubble::after {
+    top:auto;
+    bottom:100%;
+    left:20px;
+    right:auto;
+    transform:none;
+    border-top-color:transparent;
+    border-bottom-color:#0f172a;
+}
+
+.searchloss-table th:nth-last-child(-n+4) .searchloss-tooltip-bubble,
+.searchloss-money-action .searchloss-tooltip-bubble {
+    left:auto;
+    right:0;
+    transform:none;
+}
+
+.searchloss-table th:nth-last-child(-n+4) .searchloss-tooltip-bubble::after,
+.searchloss-money-action .searchloss-tooltip-bubble::after {
+    left:auto;
+    right:20px;
+    transform:none;
+}
+
+.searchloss-kpi-panel,
+.searchloss-section,
+.searchloss-section-header,
+.searchloss-card,
+.searchloss-grid,
+.searchloss-money-actions,
+.searchloss-money-actions-grid,
+.searchloss-money-action {
+    overflow:visible;
+}
+
 @media (max-width:1000px) { .searchloss-money-actions-grid { grid-template-columns:1fr; } }
 
-.searchloss-section { background:#fff; border:1px solid #d7dce2; border-radius:18px; margin-bottom:18px; overflow:hidden; box-shadow:0 8px 20px rgba(15,23,42,.06); }
-.searchloss-section-header { padding:16px 18px; border-bottom:1px solid #e5e7eb; background:#f8fafc; }
-.searchloss-section-head { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; }
-.searchloss-section-copy { flex:1; min-width:280px; }
-.searchloss-section-header h2 { margin:0; color:#0f172a; font-size:18px; font-weight:700; }
+.searchloss-section { background:#fff; border:1px solid #d7dce2; border-radius:18px; margin-bottom:18px; overflow:visible; box-shadow:0 8px 20px rgba(15,23,42,.06); }
+.searchloss-section-header { position:relative; z-index:5; padding:16px 18px; border-bottom:1px solid #e5e7eb; background:#f8fafc; overflow:visible; }
+.searchloss-section-head { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; overflow:visible; }
+.searchloss-section-copy { flex:1; min-width:280px; overflow:visible; }
+.searchloss-section-header h2 { position:relative; margin:0; color:#0f172a; font-size:18px; font-weight:700; overflow:visible; }
 .searchloss-section-header p { margin:6px 0 0; color:#64748b; font-size:13px; line-height:1.5; }
 .searchloss-filter-bar { display:grid; grid-template-columns:1.5fr .9fr 1.1fr 1.1fr auto auto auto; gap:10px; padding:14px 18px; border-bottom:1px solid #e5e7eb; background:#fff; align-items:end; }
 .searchloss-filter-field label { display:block; margin-bottom:6px; color:#64748b; font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
@@ -812,6 +911,379 @@ function catalogEvidenceTooltip($label) {
 /* searchloss hero logo responsive overrides end */
 
 
+
+.searchloss-audit-config {
+    position: relative;
+}
+
+.searchloss-audit-config summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 18px;
+    padding: 7px 12px;
+    border: 1px solid rgba(125,211,252,.34);
+    background: rgba(14,165,233,.12);
+    border-radius: 999px;
+    color: #dbeafe;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+    list-style: none;
+}
+
+.searchloss-audit-config summary::-webkit-details-marker {
+    display: none;
+}
+
+.searchloss-audit-config summary::after {
+    content: "⚙";
+    color: #93c5fd;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.searchloss-audit-config[open] summary {
+    border-color: rgba(147,197,253,.60);
+    background: rgba(37,99,235,.24);
+}
+
+.searchloss-audit-config-body {
+    position: absolute;
+    z-index: 240;
+    left: 0;
+    top: calc(100% + 12px);
+    width: min(620px, calc(100vw - 80px));
+    padding: 18px;
+    border: 1px solid rgba(148,163,184,.32);
+    border-radius: 18px;
+    background: #0f172a;
+    box-shadow: 0 24px 60px rgba(2,6,23,.36);
+    color: #e2e8f0;
+}
+
+.searchloss-audit-config-body h3 {
+    margin: 0 0 8px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 900;
+}
+
+.searchloss-audit-config-body p {
+    margin: 0 0 14px;
+    color: #cbd5e1;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.searchloss-audit-config-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.searchloss-audit-config-item {
+    padding: 13px 14px;
+    border: 1px solid rgba(148,163,184,.22);
+    border-radius: 14px;
+    background: rgba(15,23,42,.72);
+}
+
+.searchloss-audit-config-item strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #f8fafc;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.searchloss-audit-config-item code {
+    display: block;
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(2,6,23,.62);
+    color: #bfdbfe;
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.searchloss-audit-config-note {
+    margin-top: 14px;
+    padding: 11px 12px;
+    border: 1px solid rgba(45,212,191,.22);
+    border-radius: 12px;
+    background: rgba(20,184,166,.10);
+    color: #ccfbf1;
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1.45;
+}
+
+
+.searchloss-audit-config-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.searchloss-audit-config-save,
+.searchloss-audit-config-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 8px 13px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.searchloss-audit-config-save {
+    border: 1px solid rgba(96,165,250,.55);
+    background: rgba(37,99,235,.28);
+    color: #dbeafe;
+}
+
+.searchloss-audit-config-save[disabled] {
+    cursor: not-allowed;
+    opacity: .72;
+}
+
+.searchloss-audit-config-close {
+    border: 1px solid rgba(148,163,184,.42);
+    background: rgba(15,23,42,.82);
+    color: #e2e8f0;
+}
+
+.searchloss-audit-config-close:hover,
+.searchloss-audit-config-close:focus {
+    border-color: rgba(226,232,240,.62);
+    background: rgba(30,41,59,.92);
+    outline: none;
+}
+
+
+.searchloss-audit-config-form {
+    margin: 0;
+}
+
+.searchloss-audit-config-item textarea,
+.searchloss-audit-config-item input {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 8px;
+    padding: 9px 10px;
+    border: 1px solid rgba(148,163,184,.38);
+    border-radius: 10px;
+    background: rgba(2,6,23,.62);
+    color: #bfdbfe;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.searchloss-audit-config-item textarea:focus,
+.searchloss-audit-config-item input:focus {
+    border-color: rgba(147,197,253,.80);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(37,99,235,.22);
+}
+
+
+/* Search Loss audit config modal interaction fixes */
+.searchloss-config-panel-open .searchloss-tooltip-bubble {
+    display: none !important;
+}
+
+.searchloss-audit-config[open] {
+    z-index: 260;
+}
+
+.searchloss-audit-config[open] .searchloss-audit-config-body {
+    z-index: 300;
+}
+
+.searchloss-audit-config-item input[type="number"]::-webkit-outer-spin-button,
+.searchloss-audit-config-item input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.searchloss-audit-config-item input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+
+.searchloss-audit-config-unsaved {
+    display: none;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(251,191,36,.36);
+    border-radius: 12px;
+    background: rgba(251,191,36,.12);
+    color: #fde68a;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.45;
+}
+
+.searchloss-audit-config-form.searchloss-audit-config-form--dirty .searchloss-audit-config-unsaved {
+    display: block;
+}
+
+
+/* Search Loss low engagement section collapse polish */
+.searchloss-low-engagement-section > summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+.searchloss-low-engagement-section > summary::-webkit-details-marker {
+    display: none;
+}
+
+.searchloss-low-engagement-section > summary .searchloss-section-head::after {
+    content: "↓";
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-left: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    color: #64748b;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 900;
+    flex: 0 0 auto;
+}
+
+.searchloss-low-engagement-section[open] > summary .searchloss-section-head::after {
+    content: "↑";
+}
+
+.searchloss-section-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 5px 10px;
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+
+/* Search Loss audit table section collapse polish */
+.searchloss-audit-table-section > summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+.searchloss-audit-table-section > summary::-webkit-details-marker {
+    display: none;
+}
+
+.searchloss-audit-table-section > summary .searchloss-section-head::after {
+    content: "↓";
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-left: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    color: #64748b;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 900;
+    flex: 0 0 auto;
+}
+
+.searchloss-audit-table-section[open] > summary .searchloss-section-head::after {
+    content: "↑";
+}
+
+.searchloss-audit-table-section > summary:hover {
+    background: #f1f5f9;
+}
+
+.searchloss-section-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 5px 10px;
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+
+/* Search Loss audit table header tooltip anti-clipping fix */
+.searchloss-audit-table-section > summary .searchloss-tooltip-label {
+    position: relative;
+    z-index: 300;
+}
+
+.searchloss-audit-table-section > summary .searchloss-tooltip-bubble {
+    top: calc(100% + 10px);
+    left: 0;
+    z-index: 500;
+    width: 360px;
+    max-width: min(360px, calc(100vw - 80px));
+}
+
+.searchloss-audit-table-section > summary .searchloss-tooltip-bubble::after {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: 22px;
+    width: 10px;
+    height: 10px;
+    background: #0f172a;
+    transform: rotate(45deg);
+}
+
+.searchloss-failed-search-section {
+    margin-bottom: 28px;
+}
+
+.searchloss-failed-search-section > summary {
+    position: relative;
+    z-index: 20;
+}
+
+.searchloss-low-engagement-section {
+    position: relative;
+    z-index: 1;
+}
+
+
+/* Search Loss tooltip text rendering polish */
+.searchloss-tooltip-bubble {
+    font-weight: 700;
+    letter-spacing: 0;
+    font-variant-numeric: normal;
+    text-rendering: optimizeLegibility;
+}
+
 </style>
 
 <div class="searchloss-page">
@@ -839,10 +1311,58 @@ function catalogEvidenceTooltip($label) {
             </div>
             <div class="searchloss-audit-guide-item">
                 <h3>Evidence-led recommendations</h3>
-                <p>Diagnoses are rules-based and read-only. Search Loss checks Magento evidence, then maps it to a recommended review path without changing storefront data.</p>
+                <p>Diagnoses are rules-based and read-only. Search Loss Audit checks Magento evidence, then maps it to a recommended review path without changing storefront data.</p>
             </div>
         </div>
     </details>
+            <details class="searchloss-audit-config searchloss-audit-config--hero">
+                <summary>Configure audit</summary>
+                <div class="searchloss-audit-config-body">
+                    <h3>Configure audit</h3>
+                    <p>Customize how Search Loss Audit interprets catalogue evidence and filters noisy search terms.</p>
+
+                    <form class="searchloss-audit-config-form" method="post" action="<?= $block->escapeUrl($block->getAuditConfigSaveUrl()) ?>">
+                        <?= $block->getBlockHtml('formkey') ?>
+
+                        <div class="searchloss-audit-config-grid">
+                            <label class="searchloss-audit-config-item">
+                                <strong>Product identifier attributes</strong>
+                                <p>Add Magento product attribute codes customers may search by, such as brand, MPN, alternate SKU, cross-reference, model, or OEM number.</p>
+                                <textarea name="identity_attributes" rows="3"><?= $block->escapeHtml($block->getConfiguredIdentityAttributes()) ?></textarea>
+                            </label>
+
+                            <label class="searchloss-audit-config-item">
+                                <strong>Ignored search terms</strong>
+                                <p>Exclude known test searches, internal checks, bot-like terms, or other noise from audit findings.</p>
+                                <textarea name="ignored_terms" rows="3"><?= $block->escapeHtml($block->getConfiguredIgnoredTerms()) ?></textarea>
+                            </label>
+
+                            <label class="searchloss-audit-config-item">
+                                <strong>Minimum failed searches</strong>
+                                <p>Hide one-off failed terms until they happen enough times to matter.</p>
+                                <input type="number" name="minimum_popularity" min="1" value="<?= (int)$block->getConfiguredMinimumPopularity() ?>">
+                            </label>
+                        </div>
+
+                        <div class="searchloss-audit-config-note">
+                            Unsaved changes will not be applied until you click Save Configuration. These settings only change how the audit interprets evidence. They do not change products, categories, orders, checkout, storefront search behaviour, or customer data.
+                        </div>
+
+                        <div class="searchloss-audit-config-unsaved" aria-live="polite">
+                            You have unsaved changes. Closing this panel will keep your edits on this screen, but they will not be applied until you click Save Configuration.
+                        </div>
+
+                        <div class="searchloss-audit-config-actions">
+                            <button type="submit" class="searchloss-audit-config-save">
+                                Save Configuration
+                            </button>
+                            <button type="button" class="searchloss-audit-config-close">
+                                Close
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </details>
         </div>
             <div class="searchloss-hero-brand">
             <img
@@ -916,12 +1436,12 @@ function catalogEvidenceTooltip($label) {
         </details>
     <?php endif; ?>
 
-    <div class="searchloss-section">
-        <div class="searchloss-section-header">
+    <details class="searchloss-section searchloss-audit-table-section searchloss-failed-search-section">
+        <summary class="searchloss-section-header">
             <div class="searchloss-section-head">
                 <div class="searchloss-section-copy">
-                    <h2>Prioritized search findings</h2>
-                    <p>Highest-priority search findings ranked by demand, estimated demand value, diagnosis, and confidence.</p>
+                    <h2><?= tooltipLabel('Prioritized search findings', 'Magento-native failed-search audit. These are searches where customers searched and Magento returned zero results, ranked by demand, estimated demand value, diagnosis, and confidence.') ?></h2>
+                    <p>Highest-priority failed-search findings ranked by demand, estimated demand value, diagnosis, and confidence.</p>
                 </div>
 
                 <div class="searchloss-periods">
@@ -932,7 +1452,7 @@ function catalogEvidenceTooltip($label) {
                     <a href="?period=365" style="<?= activeStyle($currentPeriod, '365') ?>">Last year</a>
                 </div>
             </div>
-        </div>
+        </summary>
 
         <?php if (empty($rankedTerms)): ?>
             <div class="searchloss-empty">No failed search terms were found for the selected period.</div>
@@ -1070,7 +1590,7 @@ function catalogEvidenceTooltip($label) {
                                                 <span class="searchloss-inline-actions-separator">|</span>
                                                 <a class="searchloss-inline-action-link" href="<?= $block->getUrl('catalog/category/index') ?>" target="_blank" rel="noopener">Categories</a>
                                                 <span class="searchloss-inline-actions-separator">|</span>
-                                                <a class="searchloss-inline-action-link" href="<?= $block->getUrl('catalog/search/index') ?>" target="_blank" rel="noopener">Search terms</a>
+                                                <a class="searchloss-inline-action-link" href="<?= $block->getUrl('search/term/index') ?>" target="_blank" rel="noopener">Search terms</a>
                                                 <span class="searchloss-inline-actions-separator">|</span>
                                                 <a class="searchloss-inline-action-link" href="<?= $block->getUrl('indexer/indexer/list') ?>" target="_blank" rel="noopener">Indexes</a>
                                                 <span class="searchloss-inline-actions-separator">|</span>
@@ -1126,7 +1646,69 @@ function catalogEvidenceTooltip($label) {
                 </table>
             </div>
         <?php endif; ?>
-    </div>
+    </details>
+
+    <?php $lowEngagementTerms = $block->getLowEngagementSearchTerms(); ?>
+
+    <details class="searchloss-section searchloss-audit-table-section searchloss-low-engagement-section">
+        <summary class="searchloss-section-header">
+            <div class="searchloss-section-head">
+                <div class="searchloss-section-copy">
+                    <h2><?= tooltipLabel('Searches With Low Engagement', 'Analytics-powered diagnostic for searches that returned results but did not meaningfully move customers forward.') ?></h2>
+                    <p>Searches that returned results, but showed weak product engagement, add-to-cart, or purchase behaviour.</p>
+                </div>
+                <div class="searchloss-section-badge">
+                    <?= number_format(count($lowEngagementTerms)) ?> findings
+                </div>
+            </div>
+        </summary>
+
+        <?php if (empty($lowEngagementTerms)): ?>
+            <div class="searchloss-empty">
+                No low-engagement search findings were found. This may mean GA4 search data is not available yet, or current GA4 rows do not show clear search friction.
+            </div>
+        <?php else: ?>
+            <div class="searchloss-table-hint">
+                <strong>Phase 2:</strong> This uses GA4-style search engagement data. It is diagnostic only and does not change storefront search, checkout, catalogue data, or customer workflows.
+            </div>
+
+            <div class="searchloss-table-wrap">
+                <table class="searchloss-table searchloss-low-engagement-table">
+                    <thead>
+                        <tr>
+                            <th>Search term</th>
+                            <th>Searches</th>
+                            <th>Product engagement</th>
+                            <th>Add-to-cart rate</th>
+                            <th>Purchase rate</th>
+                            <th>Weakness signal</th>
+                            <th>Recommended review</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($lowEngagementTerms as $term): ?>
+                            <tr>
+                                <td><span class="searchloss-term"><?= $block->escapeHtml($term['term'] ?? '') ?></span></td>
+                                <td><?= number_format((int)($term['searches'] ?? 0)) ?></td>
+                                <td><?= number_format((float)($term['productEngagementRate'] ?? 0), 2) ?>%</td>
+                                <td><?= number_format((float)($term['addToCartRate'] ?? 0), 2) ?>%</td>
+                                <td><?= number_format((float)($term['purchaseRate'] ?? 0), 2) ?>%</td>
+                                <td>
+                                    <span class="searchloss-pill" style="background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;">
+                                        <?= $block->escapeHtml($term['weaknessSignal'] ?? 'Needs review') ?>
+                                    </span>
+                                </td>
+                                <td class="searchloss-action">
+                                    <?= $block->escapeHtml($term['recommendedReview'] ?? 'Review GA4 search engagement and Magento catalogue evidence.') ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </details>
+
 </div>
 
 
@@ -1136,6 +1718,80 @@ document.addEventListener('DOMContentLoaded', function () {
     var currentSortDirection = 'desc';
     var currentMoneyActionEffort = 'all';
     var currentMoneyActionEffortLabel = '';
+
+    function closeAuditGuideOnOutsideClick() {
+        document.addEventListener('click', function (event) {
+            document.querySelectorAll('.searchloss-audit-guide[open]').forEach(function (guide) {
+                if (!guide.contains(event.target)) {
+                    guide.removeAttribute('open');
+                }
+            });
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key !== 'Escape') {
+                return;
+            }
+
+            document.querySelectorAll('.searchloss-audit-guide[open]').forEach(function (guide) {
+                guide.removeAttribute('open');
+            });
+        });
+    }
+
+    closeAuditGuideOnOutsideClick();
+
+    function updateAuditConfigOpenState() {
+        var hasOpenConfig = document.querySelector('.searchloss-audit-config[open]') !== null;
+        document.body.classList.toggle('searchloss-config-panel-open', hasOpenConfig);
+    }
+
+    document.querySelectorAll('.searchloss-audit-config').forEach(function (configPanel) {
+        configPanel.addEventListener('toggle', updateAuditConfigOpenState);
+    });
+
+    document.querySelectorAll('.searchloss-audit-config-close').forEach(function (button) {
+        button.addEventListener('click', function () {
+            var configPanel = button.closest('.searchloss-audit-config');
+            if (configPanel) {
+                configPanel.removeAttribute('open');
+                updateAuditConfigOpenState();
+            }
+        });
+    });
+
+    updateAuditConfigOpenState();
+
+    document.querySelectorAll('.searchloss-audit-config-form').forEach(function (form) {
+        var initialSnapshot = new FormData(form);
+        var initialValues = {};
+
+        initialSnapshot.forEach(function (value, key) {
+            initialValues[key] = String(value);
+        });
+
+        function updateDirtyState() {
+            var currentSnapshot = new FormData(form);
+            var isDirty = false;
+
+            currentSnapshot.forEach(function (value, key) {
+                if (String(value) !== String(initialValues[key] || '')) {
+                    isDirty = true;
+                }
+            });
+
+            form.classList.toggle('searchloss-audit-config-form--dirty', isDirty);
+        }
+
+        form.querySelectorAll('input, textarea, select').forEach(function (field) {
+            field.addEventListener('input', updateDirtyState);
+            field.addEventListener('change', updateDirtyState);
+        });
+
+        form.addEventListener('submit', function () {
+            form.classList.remove('searchloss-audit-config-form--dirty');
+        });
+    });
 
     function getMainRows() {
         return Array.prototype.slice.call(document.querySelectorAll('tr.searchloss-main-row'));

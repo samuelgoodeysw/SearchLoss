@@ -79,4 +79,35 @@ class Dashboard extends Template
 
         return $payload['failedSearchTerms'] ?? [];
     }
+    public function getAuditConfigSaveUrl(): string
+    {
+        return $this->getUrl('searchloss/config/save');
+    }
+
+    public function getConfiguredIdentityAttributes(): string
+    {
+        return $this->dataProvider->getConfiguredIdentityAttributes();
+    }
+
+    public function getConfiguredIgnoredTerms(): string
+    {
+        return $this->dataProvider->getConfiguredIgnoredTerms();
+    }
+
+    public function getConfiguredMinimumPopularity(): int
+    {
+        return $this->dataProvider->getConfiguredMinimumPopularity();
+    }
+
+    public function getLowEngagementSearchTerms(): array
+    {
+        $payload = $this->getDashboardPayload();
+
+        $terms = $payload['lowEngagementSearchTerms'] ?? [];
+
+        return array_values(array_filter($terms, function ($term) {
+            return !empty($term['isLowEngagementFinding']);
+        }));
+    }
+
 }

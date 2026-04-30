@@ -1,12 +1,12 @@
-# Search Loss
+# Search Loss Audit
 
-Search Loss is a Magento search audit and diagnosis module.
+Search Loss Audit is a Magento search audit and diagnosis module.
 
 It helps merchants identify failed site searches, estimate directional revenue at risk, review catalogue evidence, and prioritise what to fix first.
 
 ## What it does
 
-Search Loss helps answer:
+Search Loss Audit helps answer:
 
 - What are customers searching for but not finding?
 - Which failed searches happen most often?
@@ -23,7 +23,7 @@ A failed search is:
 
 Customer searched -> Magento returned zero results
 
-Search Loss turns failed searches into a prioritised diagnosis list.
+Search Loss Audit turns failed searches into a prioritised diagnosis list.
 
 ## Current features
 
@@ -42,7 +42,7 @@ Search Loss turns failed searches into a prioritised diagnosis list.
 
 ## Admin location
 
-Reports -> Search Loss
+Reports -> Business Intelligence -> Search Loss Audit
 
 ## REST endpoint
 
@@ -58,7 +58,7 @@ Reports -> Search Loss
 
 ## Data sources
 
-Search Loss currently uses Magento-native data:
+Search Loss Audit currently uses Magento-native data:
 
 - search_query
 - sales_order
@@ -80,7 +80,7 @@ Use this as a prioritisation signal, not an exact financial claim.
 
 ## Diagnosis examples
 
-Search Loss can classify issues such as:
+Search Loss Audit can classify issues such as:
 
 - Product exists but search is not matching it
 - Product exists but is disabled
@@ -99,15 +99,15 @@ Search Loss can classify issues such as:
 
 ## Market positioning
 
-Search Loss is not a replacement for Algolia, Klevu, Adobe Live Search, Searchspring, or similar search platforms.
+Search Loss Audit is not a replacement for Algolia, Klevu, Adobe Live Search, Searchspring, or similar search platforms.
 
 Those tools improve the search experience itself: ranking, relevance, autocomplete, typo tolerance, merchandising, and search result quality.
 
-Search Loss is a diagnostic and opportunity layer. It helps merchants understand where Magento search may be leaking demand, what that missed demand may be worth, and what should be reviewed first.
+Search Loss Audit is a diagnostic and opportunity layer. It helps merchants understand where Magento search may be leaking demand, what that missed demand may be worth, and what should be reviewed first.
 
 ## Suggested pitch
 
-Search Loss audits your Magento site search and shows which failed searches are costing you demand, why they may be failing, and what to fix first.
+Search Loss Audit reviews Magento site search and shows which failed searches may represent missed demand, why they may be failing, and what to review first.
 
 ## Hyva compatibility
 
@@ -152,7 +152,7 @@ Possible future sections:
 - GA4 integration is not included in the current phase.
 - ERP, margin, inventory, and workflow features are future roadmap items.
 - Recommendation logic is rule-based, not LLM-generated.
-- Search Loss recommends checks and fixes but does not automatically modify catalogue data.
+- Search Loss Audit recommends checks and fixes but does not automatically modify catalogue data.
 
 ## Development commands
 
@@ -185,3 +185,24 @@ Before broader installation or marketplace-style packaging, review:
 - customer-facing documentation
 - compatibility matrix
 - production-safe install instructions
+
+## Performance testing note
+
+Local stress testing was completed using a removable `SLTEST` dataset in Magento's `search_query` table.
+
+Test summary:
+
+- 5,000 additional failed-search rows were inserted for stress testing.
+- The API response stayed capped to the prioritized findings set rather than returning every failed term.
+- The REST endpoint remained fast locally, responding in roughly 0.5 seconds during the 5,000-row test.
+- The response size stayed controlled at around 60 KB.
+- The stress rows were removed after testing.
+
+This supports the current MVP approach: Search Loss Audit should behave as a prioritized audit view, not a full raw export of every historical failed search.
+
+For larger production catalogues, the recommended approach is still:
+
+- rank failed searches first
+- deep-diagnose only the highest-priority findings
+- keep endpoint output capped
+- avoid returning every raw search row in the dashboard
