@@ -28,6 +28,28 @@ The strongest commercial offer is a fixed audit:
 
 A Search Loss Audit that produces a prioritised list of search issues, supporting Magento evidence, and recommended fixes.
 
+## Audit-first commercial model
+
+The recommended first client move is not a production module install.
+
+The cleaner first move is a paid Search & Discovery Audit.
+
+Use Search Loss Audit as the internal analysis engine, run it against a sanitized database dump or approved export, and produce a one-off report or walkthrough for the client.
+
+This gives the client the insight win without production install risk.
+
+Recommended order:
+
+1. Run the audit against sanitized client data.
+2. Produce a report or walkthrough.
+3. Use the evidence to scope follow-on work.
+4. Only propose installing the module later if the client wants ongoing visibility.
+
+This avoids leading with custom production code before the value has been proven. It also creates a natural bridge into catalogue hygiene, synonym/search-term setup, layered navigation refactor, Adobe Live Search readiness, and broader search/discovery improvement work.
+
+See SEARCH_DISCOVERY_AUDIT_OFFER.md for the client-facing offer shape.
+
+
 Use careful value wording:
 
 - Est. Demand Value
@@ -82,6 +104,41 @@ It helps diagnose:
 - search terms that drive revenue and should be monitored, not treated as loss items
 
 GA4 is optional enrichment. Search Loss Audit should still work as a Magento failed-search audit if GA4 data is not available.
+
+## Future Phase 3: Abandoned Search Opportunities
+
+True search abandonment is a strong future extension, especially where search speed is already a known pain.
+
+Do not build this before the audit has traction.
+
+A careful future definition would be:
+
+    Customer searched or started a search -> no useful next step happened
+
+Possible useful signals:
+
+- no product view
+- no add-to-cart
+- no purchase
+- no quote/request
+- session ended or moved away
+- search latency or timeout evidence
+- logged-in customer/account identity where approved
+
+This could become especially useful for B2B sales and customer-service follow-up.
+
+For example, a future report could show accounts that searched for commercially meaningful terms but did not continue to product, cart, quote, or order activity.
+
+Use careful wording unless instrumentation proves true abandonment:
+
+- possible search abandonment
+- searched but did not continue
+- search session ended without engagement
+- account follow-up opportunity
+
+Do not claim the customer left before search completed unless search-start, search-complete, latency, and page-leave events prove it.
+
+Named-account follow-up should be treated as an optional follow-on use case. The client may have customer accounts, but using search behaviour to trigger sales/customer-service outreach is a different operational workflow from an aggregated audit.
 
 ## Current features
 
@@ -354,28 +411,38 @@ This supports the current MVP approach:
 
 ## Commercial readiness
 
-Search Loss Audit is closest to being sold as a fixed audit/service offer, not as a self-serve extension yet.
+Search Loss Audit is closest to being sold as a fixed audit/service offer, not as a self-serve extension.
 
 Recommended near-term offer:
 
-Fixed Search Loss Audit
+Search & Discovery Audit
 
-Includes:
+The audit can be delivered without installing the module on the client's production store.
 
-- setup or dashboard review
-- failed-search analysis
-- optional GA4 enrichment if available
-- top missed-demand opportunities
-- catalogue/search diagnosis
-- prioritised fix list
-- client review session or written summary
+Recommended delivery method:
 
-This can open follow-up work around:
+- use a sanitized Magento database dump or approved data export
+- run the analysis internally
+- generate a one-off report, PDF, dashboard export, or walkthrough
+- review findings with the client
+- scope follow-on work from evidence
 
-- search configuration
-- catalogue data cleanup
-- synonyms/search terms
-- product visibility/assignment fixes
+This is stronger than leading with a module install because it gives the client insight first and avoids governance, IP, support, and production-readiness concerns while the module is still maturing.
+
+The audit can open follow-up work around:
+
+- catalogue hygiene
+- product data cleanup
+- synonyms and search terms
+- attribute/search configuration
+- product visibility and assignment fixes
+- layered navigation refactor
+- Adobe Live Search readiness
+- Adobe Live Search implementation or optimisation
 - GA4/search tracking
-- Adobe Live Search or search platform feasibility
-- workflow or reporting automation
+- search speed and abandonment instrumentation
+- account-level sales/customer-service follow-up workflow
+- ongoing Search Loss dashboard installation later
+
+Only propose installing the module after the audit has landed well and the client wants ongoing visibility.
+
