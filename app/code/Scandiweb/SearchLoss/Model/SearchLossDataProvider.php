@@ -1682,6 +1682,296 @@ class SearchLossDataProvider
         }
     }
 
+
+    public function getLoggedInSearchIntelligence(): array
+    {
+        $connection = $this->resource->getConnection();
+        $table = $this->resource->getTableName('scandiweb_searchloss_search_event');
+
+        if (!$connection->isTableExists($table)) {
+            return [];
+        }
+
+        $customerTable = $this->resource->getTableName('customer_entity');
+
+        $rows = $connection->fetchAll(
+            $connection->select()
+                ->from(['se' => $table], [
+                    'event_id',
+                    'searched_at',
+                    'completed_at',
+                    'response_time_ms',
+                    'completion_status',
+                    'store_id',
+                    'customer_id',
+                    'search_term',
+                    'results_count',
+                    'source',
+                ])
+                ->joinLeft(
+                    ['ce' => $customerTable],
+                    'ce.entity_id = se.customer_id',
+                    [
+                        'customer_email' => 'email',
+                        'customer_firstname' => 'firstname',
+                        'customer_lastname' => 'lastname',
+                    ]
+                )
+                ->order('se.searched_at DESC')
+                ->limit(50)
+        );
+
+        $events = [];
+
+        foreach ($rows as $row) {
+            $status = $this->getLoggedInSearchLifecycleStatus($row);
+            $followThrough = $this->getLoggedInSearchFollowThrough($row);
+            $responseTimeMs = $row['response_time_ms'] === null ? null : (int)$row['response_time_ms'];
+            $resultsCount = $row['results_count'] === null ? null : (int)$row['results_count'];
+
+            $events[] = [
+                'eventId' => (int)$row['event_id'],
+                'searchedAt' => (string)$row['searched_at'],
+                'completedAt' => $row['completed_at'] === null ? null : (string)$row['completed_at'],
+                'responseTimeMs' => $responseTimeMs,
+                'completionStatus' => (string)$row['completion_status'],
+                'storeId' => (int)$row['store_id'],
+                'customerId' => (int)$row['customer_id'],
+                'customerEmail' => (string)($row['customer_email'] ?? ''),
+                'customerName' => trim((string)($row['customer_firstname'] ?? '') . ' ' . (string)($row['customer_lastname'] ?? '')),
+                'searchTerm' => (string)$row['search_term'],
+                'resultsCount' => $resultsCount,
+                'source' => (string)$row['source'],
+                'lifecycleStatus' => $status['label'],
+                'lifecycleExplanation' => $status['explanation'],
+                'isPossibleSearchFriction' => $status['isPossibleSearchFriction'],
+                'matchingCartFound' => $followThrough['matchingCartFound'],
+                'matchingOrderFound' => $followThrough['matchingOrderFound'],
+                'matchedItemName' => $followThrough['matchedItemName'],
+                'matchedItemSku' => $followThrough['matchedItemSku'],
+                'matchedQuoteId' => $followThrough['matchedQuoteId'],
+                'matchedOrderId' => $followThrough['matchedOrderId'],
+                'commercialFollowThroughStatus' => $followThrough['status'],
+                'commercialFollowThroughExplanation' => $followThrough['explanation'],
+                'isUnresolvedLoggedInSearch' => $followThrough['isUnresolvedLoggedInSearch'],
+            ];
+        }
+
+        return $events;
+    }
+
+
+    private function getLoggedInSearchFollowThrough(array $row): array
+    {
+        $customerId = (int)($row['customer_id'] ?? 0);
+        $searchTerm = trim((string)($row['search_term'] ?? ''));
+        $searchedAt = (string)($row['searched_at'] ?? '');
+
+        if ($customerId <= 0 || $searchTerm === '' || $searchedAt === '') {
+            return [
+                'matchingCartFound' => false,
+                'matchingOrderFound' => false,
+                'matchedItemName' => '',
+                'matchedItemSku' => '',
+                'matchedQuoteId' => null,
+                'matchedOrderId' => null,
+                'status' => 'Needs review',
+                'explanation' => 'This logged-in search event could not be matched because customer, search term, or search timestamp was missing.',
+                'isUnresolvedLoggedInSearch' => true,
+            ];
+        }
+
+        $orderMatch = $this->findLoggedInSearchOrderMatch($customerId, $searchTerm, $searchedAt);
+
+        if (!empty($orderMatch)) {
+            return [
+                'matchingCartFound' => false,
+                'matchingOrderFound' => true,
+                'matchedItemName' => (string)($orderMatch['name'] ?? ''),
+                'matchedItemSku' => (string)($orderMatch['sku'] ?? ''),
+                'matchedQuoteId' => null,
+                'matchedOrderId' => (int)($orderMatch['order_id'] ?? 0),
+                'status' => 'Matching order found',
+                'explanation' => 'A later order item appears to match this logged-in search. This search likely had commercial follow-through.',
+                'isUnresolvedLoggedInSearch' => false,
+            ];
+        }
+
+        $cartMatch = $this->findLoggedInSearchCartMatch($customerId, $searchTerm, $searchedAt);
+
+        if (!empty($cartMatch)) {
+            return [
+                'matchingCartFound' => true,
+                'matchingOrderFound' => false,
+                'matchedItemName' => (string)($cartMatch['name'] ?? ''),
+                'matchedItemSku' => (string)($cartMatch['sku'] ?? ''),
+                'matchedQuoteId' => (int)($cartMatch['quote_id'] ?? 0),
+                'matchedOrderId' => null,
+                'status' => 'Matching cart item found',
+                'explanation' => 'A later cart item appears to match this logged-in search. This may indicate the customer continued toward purchase.',
+                'isUnresolvedLoggedInSearch' => false,
+            ];
+        }
+
+        return [
+            'matchingCartFound' => false,
+            'matchingOrderFound' => false,
+            'matchedItemName' => '',
+            'matchedItemSku' => '',
+            'matchedQuoteId' => null,
+            'matchedOrderId' => null,
+            'status' => 'No later matching cart/order found',
+            'explanation' => 'No later cart or order item clearly matched this logged-in search. This is a useful unresolved search-intent signal for review.',
+            'isUnresolvedLoggedInSearch' => true,
+        ];
+    }
+
+    private function findLoggedInSearchCartMatch(int $customerId, string $searchTerm, string $searchedAt): array
+    {
+        $connection = $this->resource->getConnection();
+
+        $quoteTable = $this->resource->getTableName('quote');
+        $quoteItemTable = $this->resource->getTableName('quote_item');
+
+        if (!$connection->isTableExists($quoteTable) || !$connection->isTableExists($quoteItemTable)) {
+            return [];
+        }
+
+        $conditions = $this->getLoggedInSearchItemMatchConditions('qi', $searchTerm);
+
+        if (empty($conditions)) {
+            return [];
+        }
+
+        $row = $connection->fetchRow(
+            $connection->select()
+                ->from(['q' => $quoteTable], ['quote_id' => 'entity_id'])
+                ->join(
+                    ['qi' => $quoteItemTable],
+                    'qi.quote_id = q.entity_id',
+                    ['sku', 'name', 'created_at', 'updated_at']
+                )
+                ->where('q.customer_id = ?', $customerId)
+                ->where('qi.parent_item_id IS NULL')
+                ->where('qi.created_at >= ?', $searchedAt)
+                ->where('(' . implode(' OR ', $conditions) . ')')
+                ->order('qi.created_at ASC')
+                ->limit(1)
+        );
+
+        return is_array($row) ? $row : [];
+    }
+
+    private function findLoggedInSearchOrderMatch(int $customerId, string $searchTerm, string $searchedAt): array
+    {
+        $connection = $this->resource->getConnection();
+
+        $orderTable = $this->resource->getTableName('sales_order');
+        $orderItemTable = $this->resource->getTableName('sales_order_item');
+
+        if (!$connection->isTableExists($orderTable) || !$connection->isTableExists($orderItemTable)) {
+            return [];
+        }
+
+        $conditions = $this->getLoggedInSearchItemMatchConditions('soi', $searchTerm);
+
+        if (empty($conditions)) {
+            return [];
+        }
+
+        $row = $connection->fetchRow(
+            $connection->select()
+                ->from(['so' => $orderTable], ['order_id' => 'entity_id', 'increment_id'])
+                ->join(
+                    ['soi' => $orderItemTable],
+                    'soi.order_id = so.entity_id',
+                    ['sku', 'name', 'created_at']
+                )
+                ->where('so.customer_id = ?', $customerId)
+                ->where('soi.parent_item_id IS NULL')
+                ->where('so.created_at >= ?', $searchedAt)
+                ->where('so.state != ?', 'canceled')
+                ->where('(' . implode(' OR ', $conditions) . ')')
+                ->order('so.created_at ASC')
+                ->limit(1)
+        );
+
+        return is_array($row) ? $row : [];
+    }
+
+    private function getLoggedInSearchItemMatchConditions(string $alias, string $searchTerm): array
+    {
+        $connection = $this->resource->getConnection();
+
+        $cleanTerm = trim((string)preg_replace('/\s+/', ' ', strtolower($searchTerm)));
+
+        if ($cleanTerm === '') {
+            return [];
+        }
+
+        /*
+         * Logged-in Search Intelligence should stay customer-event-led.
+         *
+         * Match follow-through against the actual search phrase the logged-in
+         * customer entered, not broad token/keyword matches. Broader keyword
+         * matching belongs in catalogue evidence / failed-search diagnosis.
+         */
+        $like = '%' . $cleanTerm . '%';
+
+        return [
+            $connection->quoteInto('LOWER(' . $alias . '.name) LIKE ?', $like),
+            $connection->quoteInto('LOWER(' . $alias . '.sku) LIKE ?', $like),
+        ];
+    }
+
+
+    private function getLoggedInSearchLifecycleStatus(array $row): array
+    {
+        $completionStatus = (string)($row['completion_status'] ?? 'started');
+        $completedAt = $row['completed_at'] ?? null;
+        $responseTimeMs = $row['response_time_ms'] === null ? null : (int)$row['response_time_ms'];
+        $resultsCount = $row['results_count'] === null ? null : (int)$row['results_count'];
+
+        if ($completionStatus === 'started' && $completedAt === null) {
+            return [
+                'label' => 'Search started, completion not recorded',
+                'explanation' => 'Magento received the logged-in customer search, but no completed server response was recorded. This may indicate search speed, timeout, cancellation, page failure, or another search-friction issue.',
+                'isPossibleSearchFriction' => true,
+            ];
+        }
+
+        if ($completionStatus === 'server_completed' && $resultsCount === 0) {
+            return [
+                'label' => 'Completed, zero results',
+                'explanation' => 'Magento completed the search response, but returned zero results.',
+                'isPossibleSearchFriction' => true,
+            ];
+        }
+
+        if ($completionStatus === 'server_completed' && $responseTimeMs !== null && $responseTimeMs >= 3000) {
+            return [
+                'label' => 'Completed slowly',
+                'explanation' => 'Magento completed the search response, but the response time was high enough to review as a possible search-speed issue.',
+                'isPossibleSearchFriction' => true,
+            ];
+        }
+
+        if ($completionStatus === 'server_completed') {
+            return [
+                'label' => 'Completed',
+                'explanation' => 'Magento recorded a completed server response for this logged-in customer search.',
+                'isPossibleSearchFriction' => false,
+            ];
+        }
+
+        return [
+            'label' => 'Needs review',
+            'explanation' => 'This logged-in search event has an unexpected lifecycle state and should be reviewed.',
+            'isPossibleSearchFriction' => true,
+        ];
+    }
+
+
     public function getOpportunityInsights(): array
     {
         $connection = $this->resource->getConnection();
@@ -1852,6 +2142,10 @@ class SearchLossDataProvider
             [
                 'key' => 'lowEngagementSearchTerms',
                 'value' => $this->getLowEngagementSearchTerms()
+            ],
+            [
+                'key' => 'loggedInSearchIntelligence',
+                'value' => $this->getLoggedInSearchIntelligence()
             ]
         ];
     }

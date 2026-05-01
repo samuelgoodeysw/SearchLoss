@@ -135,4 +135,11 @@ class Dashboard extends Template
         }));
     }
 
+    public function getLoggedInSearchIntelligence(): array
+    {
+        $payload = $this->getDashboardPayload();
+
+        return $payload['loggedInSearchIntelligence'] ?? [];
+    }
+
 }
