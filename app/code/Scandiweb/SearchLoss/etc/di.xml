@@ -10,6 +10,7 @@
         <arguments>
             <argument name="commands" xsi:type="array">
                 <item name="searchloss_ga4_sync" xsi:type="object">Scandiweb\SearchLoss\Console\Command\Ga4SyncCommand</item>
+                <item name="searchloss_ga4_probe" xsi:type="object">Scandiweb\SearchLoss\Console\Command\Ga4ProbeCommand</item>
             </argument>
         </arguments>
     </type>
