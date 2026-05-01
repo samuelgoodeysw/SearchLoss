@@ -27,6 +27,19 @@
                     <label>GA4 Property ID</label>
                 </field>
 
+                <field id="frontend_tag_enabled" translate="label" type="select" sortOrder="25"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable Frontend GA4 Tag</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment><![CDATA[Local/staging validation helper. Adds the GA4 tag to the Magento storefront and sends search-result events for real browser searches.]]></comment>
+                </field>
+
+                <field id="measurement_id" translate="label" type="text" sortOrder="26"
+                       showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>GA4 Measurement ID</label>
+                    <comment><![CDATA[Example: G-XXXXXXXXXX. This is the web data stream Measurement ID, not the numeric GA4 Property ID.]]></comment>
+                </field>
+
                 <field id="credentials_json" translate="label" type="textarea" sortOrder="30"
                        showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>Service Account Credentials JSON</label>
