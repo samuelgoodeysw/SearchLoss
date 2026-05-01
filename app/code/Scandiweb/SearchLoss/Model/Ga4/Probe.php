@@ -85,6 +85,7 @@ class Probe
         }
 
         $searchTermRows = 0;
+        $urlSearchTermRows = 0;
 
         try {
             $searchReport = $this->runSearchTermReport($propertyId, $accessToken, $startDate, $endDate);
@@ -106,6 +107,29 @@ class Probe
             }
         } catch (\Throwable $exception) {
             $results[] = $this->line('Level 1: search terms', 'FAIL', $exception->getMessage());
+        }
+
+        try {
+            $searchUrlReports = $this->runMagentoSearchUrlReports($propertyId, $accessToken, $startDate, $endDate);
+            $urlSearchTermRows = $this->countUsableSearchUrlRows($searchUrlReports);
+
+            if ($urlSearchTermRows > 0) {
+                $results[] = $this->line(
+                    'Level 1B: Magento search URLs',
+                    'PASS',
+                    'Found ' . $urlSearchTermRows . ' usable search terms extracted from Magento search-result page URLs.',
+                    $this->sampleMagentoSearchUrlTerms($searchUrlReports)
+                );
+            } else {
+                $results[] = $this->line(
+                    'Level 1B: Magento search URLs',
+                    'WARN',
+                    'GA4 connected, but no Magento search-result URLs with extractable q= parameters were returned for the selected date range.',
+                    $this->describeMagentoSearchUrlReports($searchUrlReports)
+                );
+            }
+        } catch (\Throwable $exception) {
+            $results[] = $this->line('Level 1B: Magento search URLs', 'WARN', $exception->getMessage());
         }
 
         $level2Pass = false;
@@ -150,8 +174,8 @@ class Probe
             $results[] = $this->line('Level 2: engagement by search term', 'WARN', $exception->getMessage());
         }
 
-        if ($searchTermRows <= 0) {
-            $results[] = $this->line('Recommended mode', 'FAIL', 'Disable low-engagement section. GA4 search terms are not available yet.');
+        if ($searchTermRows <= 0 && $urlSearchTermRows <= 0) {
+            $results[] = $this->line('Recommended mode', 'FAIL', 'Disable low-engagement section. GA4 search terms or Magento search-result URLs are not available yet.');
         } elseif ($level2Pass) {
             $results[] = $this->line('Recommended mode', 'PASS', 'Level 2 can stay: low-engagement search diagnostics appear supportable.');
         } else {
@@ -321,6 +345,183 @@ class Probe
             ],
             'limit' => 10,
         ]);
+    }
+
+    private function runMagentoSearchUrlReports(string $propertyId, string $accessToken, string $startDate, string $endDate): array
+    {
+        $dimensions = [
+            'pageLocation',
+            'fullPageUrl',
+            'pagePathPlusQueryString',
+            'pageTitle',
+        ];
+
+        $reports = [];
+        $errors = [];
+
+        foreach ($dimensions as $dimension) {
+            try {
+                $reports[$dimension] = $this->runReport($propertyId, $accessToken, [
+                    'dateRanges' => [
+                        [
+                            'startDate' => $startDate,
+                            'endDate' => $endDate,
+                        ],
+                    ],
+                    'dimensions' => [
+                        ['name' => $dimension],
+                    ],
+                    'metrics' => [
+                        ['name' => 'eventCount'],
+                    ],
+                    'dimensionFilter' => [
+                        'filter' => [
+                            'fieldName' => $dimension,
+                            'stringFilter' => [
+                                'matchType' => 'CONTAINS',
+                                'value' => '/catalogsearch/result/',
+                            ],
+                        ],
+                    ],
+                    'orderBys' => [
+                        [
+                            'metric' => [
+                                'metricName' => 'eventCount',
+                            ],
+                            'desc' => true,
+                        ],
+                    ],
+                    'limit' => 25,
+                ]);
+            } catch (\Throwable $exception) {
+                $errors[$dimension] = $exception->getMessage();
+            }
+        }
+
+        return [
+            'reports' => $reports,
+            'errors' => $errors,
+        ];
+    }
+
+    private function countUsableSearchUrlRows(array $searchUrlReports): int
+    {
+        return count($this->getMagentoSearchTermsFromUrlReports($searchUrlReports));
+    }
+
+    private function sampleMagentoSearchUrlTerms(array $searchUrlReports): array
+    {
+        $sample = [];
+
+        foreach (array_slice($this->getMagentoSearchTermsFromUrlReports($searchUrlReports), 0, 5, true) as $term => $count) {
+            $sample[$term] = $count . ' search page views';
+        }
+
+        return $sample;
+    }
+
+    private function describeMagentoSearchUrlReports(array $searchUrlReports): array
+    {
+        $details = [];
+
+        foreach (($searchUrlReports['reports'] ?? []) as $dimension => $report) {
+            $rows = $report['rows'] ?? [];
+            $terms = [];
+
+            foreach ($rows as $row) {
+                $url = trim((string)($row['dimensionValues'][0]['value'] ?? ''));
+                $term = $this->extractMagentoSearchTermFromUrl($url);
+
+                if ($term !== null) {
+                    $terms[$term] = true;
+                }
+            }
+
+            $details[$dimension] = count($rows) . ' rows, ' . count($terms) . ' q= terms extracted';
+        }
+
+        foreach (($searchUrlReports['errors'] ?? []) as $dimension => $error) {
+            $message = (string)$error;
+
+            if (strlen($message) > 180) {
+                $message = substr($message, 0, 180) . '...';
+            }
+
+            $details[$dimension] = 'ERROR: ' . $message;
+        }
+
+        return $details;
+    }
+
+    private function getMagentoSearchTermsFromUrlReports(array $searchUrlReports): array
+    {
+        $terms = [];
+
+        foreach (($searchUrlReports['reports'] ?? []) as $report) {
+            foreach (($report['rows'] ?? []) as $row) {
+                $url = trim((string)($row['dimensionValues'][0]['value'] ?? ''));
+                $term = $this->extractMagentoSearchTermFromUrl($url);
+
+                if ($term === null) {
+                    continue;
+                }
+
+                $count = (float)($row['metricValues'][0]['value'] ?? 0);
+
+                if (!isset($terms[$term]) || $count > $terms[$term]) {
+                    $terms[$term] = $count;
+                }
+            }
+        }
+
+        arsort($terms);
+
+        return $terms;
+    }
+
+    private function extractMagentoSearchTermFromUrl(string $url): ?string
+    {
+        $url = trim(html_entity_decode($url, ENT_QUOTES | ENT_HTML5));
+
+        if ($url === '' || strtolower($url) === '(not set)') {
+            return null;
+        }
+
+        if (stripos($url, 'catalogsearch/result') === false) {
+            return null;
+        }
+
+        $query = parse_url($url, PHP_URL_QUERY);
+
+        if ($query === null || $query === false || $query === '') {
+            $questionMarkPosition = strpos($url, '?');
+
+            if ($questionMarkPosition !== false) {
+                $query = substr($url, $questionMarkPosition + 1);
+            }
+        }
+
+        if (!is_string($query) || trim($query) === '') {
+            return null;
+        }
+
+        $params = [];
+        parse_str($query, $params);
+
+        foreach (['q', 'query', 'search', 'keyword'] as $key) {
+            if (!isset($params[$key])) {
+                continue;
+            }
+
+            $term = trim((string)$params[$key]);
+            $term = preg_replace('/\s+/', ' ', $term);
+
+            if ($term !== '' && strtolower($term) !== '(not set)') {
+                return $term;
+            }
+        }
+
+        return null;
     }
 
     private function runEngagementBySearchTermReport(string $propertyId, string $accessToken, string $startDate, string $endDate): array
