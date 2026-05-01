@@ -99,6 +99,31 @@ class Dashboard extends Template
         return $this->dataProvider->getConfiguredMinimumPopularity();
     }
 
+    public function getConfiguredLowEngagementMinimumSearches(): int
+    {
+        return $this->dataProvider->getConfiguredLowEngagementMinimumSearches();
+    }
+
+    public function getConfiguredLowProductEngagementThreshold(): float
+    {
+        return $this->dataProvider->getConfiguredLowProductEngagementThreshold();
+    }
+
+    public function getConfiguredLowAddToCartThreshold(): float
+    {
+        return $this->dataProvider->getConfiguredLowAddToCartThreshold();
+    }
+
+    public function getConfiguredLowPurchaseThreshold(): float
+    {
+        return $this->dataProvider->getConfiguredLowPurchaseThreshold();
+    }
+
+    public function getConfiguredHealthyPurchaseThreshold(): float
+    {
+        return $this->dataProvider->getConfiguredHealthyPurchaseThreshold();
+    }
+
     public function getLowEngagementSearchTerms(): array
     {
         $payload = $this->getDashboardPayload();

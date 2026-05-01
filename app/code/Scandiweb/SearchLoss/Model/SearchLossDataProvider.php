@@ -10,9 +10,19 @@ class SearchLossDataProvider
     private const XML_PATH_IDENTITY_ATTRIBUTES = 'searchloss/audit/identity_attributes';
     private const XML_PATH_IGNORED_TERMS = 'searchloss/audit/ignored_terms';
     private const XML_PATH_MINIMUM_POPULARITY = 'searchloss/audit/minimum_popularity';
+    private const XML_PATH_LOW_ENGAGEMENT_MINIMUM_SEARCHES = 'searchloss/audit/low_engagement_minimum_searches';
+    private const XML_PATH_LOW_PRODUCT_ENGAGEMENT_THRESHOLD = 'searchloss/audit/low_product_engagement_threshold';
+    private const XML_PATH_LOW_ADD_TO_CART_THRESHOLD = 'searchloss/audit/low_add_to_cart_threshold';
+    private const XML_PATH_LOW_PURCHASE_THRESHOLD = 'searchloss/audit/low_purchase_threshold';
+    private const XML_PATH_HEALTHY_PURCHASE_THRESHOLD = 'searchloss/audit/healthy_purchase_threshold';
 
     private const DEFAULT_IDENTITY_ATTRIBUTES = 'manufacturer,brand,mpn,part_number,partnumber,product_code,model,oem,oem_number,supplier,vendor';
     private const DEFAULT_IGNORED_TERMS = 'test,testing,asdf,qwerty,lorem,ipsum,null,undefined';
+    private const DEFAULT_LOW_ENGAGEMENT_MINIMUM_SEARCHES = 5;
+    private const DEFAULT_LOW_PRODUCT_ENGAGEMENT_THRESHOLD = 20.0;
+    private const DEFAULT_LOW_ADD_TO_CART_THRESHOLD = 10.0;
+    private const DEFAULT_LOW_PURCHASE_THRESHOLD = 3.0;
+    private const DEFAULT_HEALTHY_PURCHASE_THRESHOLD = 5.0;
 
     protected ResourceConnection $resource;
     protected ScopeConfigInterface $scopeConfig;
@@ -55,6 +65,66 @@ class SearchLossDataProvider
         $value = (int)$this->scopeConfig->getValue(self::XML_PATH_MINIMUM_POPULARITY);
 
         return max(1, $value);
+    }
+
+    public function getConfiguredLowEngagementMinimumSearches(): int
+    {
+        $value = (int)$this->scopeConfig->getValue(self::XML_PATH_LOW_ENGAGEMENT_MINIMUM_SEARCHES);
+
+        return max(1, $value > 0 ? $value : self::DEFAULT_LOW_ENGAGEMENT_MINIMUM_SEARCHES);
+    }
+
+    public function getConfiguredLowProductEngagementThreshold(): float
+    {
+        return $this->getConfiguredPercentage(
+            self::XML_PATH_LOW_PRODUCT_ENGAGEMENT_THRESHOLD,
+            self::DEFAULT_LOW_PRODUCT_ENGAGEMENT_THRESHOLD
+        );
+    }
+
+    public function getConfiguredLowAddToCartThreshold(): float
+    {
+        return $this->getConfiguredPercentage(
+            self::XML_PATH_LOW_ADD_TO_CART_THRESHOLD,
+            self::DEFAULT_LOW_ADD_TO_CART_THRESHOLD
+        );
+    }
+
+    public function getConfiguredLowPurchaseThreshold(): float
+    {
+        return $this->getConfiguredPercentage(
+            self::XML_PATH_LOW_PURCHASE_THRESHOLD,
+            self::DEFAULT_LOW_PURCHASE_THRESHOLD
+        );
+    }
+
+    public function getConfiguredHealthyPurchaseThreshold(): float
+    {
+        return $this->getConfiguredPercentage(
+            self::XML_PATH_HEALTHY_PURCHASE_THRESHOLD,
+            self::DEFAULT_HEALTHY_PURCHASE_THRESHOLD
+        );
+    }
+
+    private function getConfiguredPercentage(string $path, float $default): float
+    {
+        $rawValue = $this->scopeConfig->getValue($path);
+
+        if ($rawValue === null || trim((string)$rawValue) === '') {
+            return $default;
+        }
+
+        $value = (float)$rawValue;
+
+        if ($value < 0) {
+            return 0.0;
+        }
+
+        if ($value > 100) {
+            return 100.0;
+        }
+
+        return $value;
     }
 
     private function applyDateFilter($select, string $period)
@@ -1538,20 +1608,26 @@ class SearchLossDataProvider
         float $purchaseRate,
         float $revenue
     ): string {
-        if ($searches >= 20 && $productEngagementRate < 40) {
+        $minimumSearches = $this->getConfiguredLowEngagementMinimumSearches();
+        $lowProductEngagementThreshold = $this->getConfiguredLowProductEngagementThreshold();
+        $lowAddToCartThreshold = $this->getConfiguredLowAddToCartThreshold();
+        $lowPurchaseThreshold = $this->getConfiguredLowPurchaseThreshold();
+        $healthyPurchaseThreshold = $this->getConfiguredHealthyPurchaseThreshold();
+
+        if ($revenue > 0 && $purchaseRate >= $healthyPurchaseThreshold) {
+            return 'Healthy revenue signal';
+        }
+
+        if ($searches >= $minimumSearches && $productEngagementRate < $lowProductEngagementThreshold) {
             return 'High searches, low product engagement';
         }
 
-        if ($productEngagementRate >= 40 && $addToCartRate < 10) {
+        if ($productEngagementRate >= $lowProductEngagementThreshold && $addToCartRate < $lowAddToCartThreshold) {
             return 'Product views, low add-to-cart';
         }
 
-        if ($addToCartRate >= 10 && $purchaseRate < 3) {
+        if ($addToCartRate >= $lowAddToCartThreshold && $purchaseRate < $lowPurchaseThreshold) {
             return 'Add-to-cart, low purchase';
-        }
-
-        if ($revenue > 0 && $purchaseRate >= 5) {
-            return 'Healthy revenue signal';
         }
 
         return 'Needs review';
