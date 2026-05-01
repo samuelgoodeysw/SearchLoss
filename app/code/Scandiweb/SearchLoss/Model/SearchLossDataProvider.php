@@ -1725,6 +1725,7 @@ class SearchLossDataProvider
 
         foreach ($rows as $row) {
             $status = $this->getLoggedInSearchLifecycleStatus($row);
+            $followThrough = $this->getLoggedInSearchFollowThrough($row);
             $responseTimeMs = $row['response_time_ms'] === null ? null : (int)$row['response_time_ms'];
             $resultsCount = $row['results_count'] === null ? null : (int)$row['results_count'];
 
@@ -1744,11 +1745,190 @@ class SearchLossDataProvider
                 'lifecycleStatus' => $status['label'],
                 'lifecycleExplanation' => $status['explanation'],
                 'isPossibleSearchFriction' => $status['isPossibleSearchFriction'],
+                'matchingCartFound' => $followThrough['matchingCartFound'],
+                'matchingOrderFound' => $followThrough['matchingOrderFound'],
+                'matchedItemName' => $followThrough['matchedItemName'],
+                'matchedItemSku' => $followThrough['matchedItemSku'],
+                'matchedQuoteId' => $followThrough['matchedQuoteId'],
+                'matchedOrderId' => $followThrough['matchedOrderId'],
+                'commercialFollowThroughStatus' => $followThrough['status'],
+                'commercialFollowThroughExplanation' => $followThrough['explanation'],
+                'isUnresolvedLoggedInSearch' => $followThrough['isUnresolvedLoggedInSearch'],
             ];
         }
 
         return $events;
     }
+
+
+    private function getLoggedInSearchFollowThrough(array $row): array
+    {
+        $customerId = (int)($row['customer_id'] ?? 0);
+        $searchTerm = trim((string)($row['search_term'] ?? ''));
+        $searchedAt = (string)($row['searched_at'] ?? '');
+
+        if ($customerId <= 0 || $searchTerm === '' || $searchedAt === '') {
+            return [
+                'matchingCartFound' => false,
+                'matchingOrderFound' => false,
+                'matchedItemName' => '',
+                'matchedItemSku' => '',
+                'matchedQuoteId' => null,
+                'matchedOrderId' => null,
+                'status' => 'Needs review',
+                'explanation' => 'This logged-in search event could not be matched because customer, search term, or search timestamp was missing.',
+                'isUnresolvedLoggedInSearch' => true,
+            ];
+        }
+
+        $orderMatch = $this->findLoggedInSearchOrderMatch($customerId, $searchTerm, $searchedAt);
+
+        if (!empty($orderMatch)) {
+            return [
+                'matchingCartFound' => false,
+                'matchingOrderFound' => true,
+                'matchedItemName' => (string)($orderMatch['name'] ?? ''),
+                'matchedItemSku' => (string)($orderMatch['sku'] ?? ''),
+                'matchedQuoteId' => null,
+                'matchedOrderId' => (int)($orderMatch['order_id'] ?? 0),
+                'status' => 'Matching order found',
+                'explanation' => 'A later order item appears to match this logged-in search. This search likely had commercial follow-through.',
+                'isUnresolvedLoggedInSearch' => false,
+            ];
+        }
+
+        $cartMatch = $this->findLoggedInSearchCartMatch($customerId, $searchTerm, $searchedAt);
+
+        if (!empty($cartMatch)) {
+            return [
+                'matchingCartFound' => true,
+                'matchingOrderFound' => false,
+                'matchedItemName' => (string)($cartMatch['name'] ?? ''),
+                'matchedItemSku' => (string)($cartMatch['sku'] ?? ''),
+                'matchedQuoteId' => (int)($cartMatch['quote_id'] ?? 0),
+                'matchedOrderId' => null,
+                'status' => 'Matching cart item found',
+                'explanation' => 'A later cart item appears to match this logged-in search. This may indicate the customer continued toward purchase.',
+                'isUnresolvedLoggedInSearch' => false,
+            ];
+        }
+
+        return [
+            'matchingCartFound' => false,
+            'matchingOrderFound' => false,
+            'matchedItemName' => '',
+            'matchedItemSku' => '',
+            'matchedQuoteId' => null,
+            'matchedOrderId' => null,
+            'status' => 'No later matching cart/order found',
+            'explanation' => 'No later cart or order item clearly matched this logged-in search. This is a useful unresolved search-intent signal for review.',
+            'isUnresolvedLoggedInSearch' => true,
+        ];
+    }
+
+    private function findLoggedInSearchCartMatch(int $customerId, string $searchTerm, string $searchedAt): array
+    {
+        $connection = $this->resource->getConnection();
+
+        $quoteTable = $this->resource->getTableName('quote');
+        $quoteItemTable = $this->resource->getTableName('quote_item');
+
+        if (!$connection->isTableExists($quoteTable) || !$connection->isTableExists($quoteItemTable)) {
+            return [];
+        }
+
+        $conditions = $this->getLoggedInSearchItemMatchConditions('qi', $searchTerm);
+
+        if (empty($conditions)) {
+            return [];
+        }
+
+        $row = $connection->fetchRow(
+            $connection->select()
+                ->from(['q' => $quoteTable], ['quote_id' => 'entity_id'])
+                ->join(
+                    ['qi' => $quoteItemTable],
+                    'qi.quote_id = q.entity_id',
+                    ['sku', 'name', 'created_at', 'updated_at']
+                )
+                ->where('q.customer_id = ?', $customerId)
+                ->where('qi.parent_item_id IS NULL')
+                ->where('qi.created_at >= ?', $searchedAt)
+                ->where('(' . implode(' OR ', $conditions) . ')')
+                ->order('qi.created_at ASC')
+                ->limit(1)
+        );
+
+        return is_array($row) ? $row : [];
+    }
+
+    private function findLoggedInSearchOrderMatch(int $customerId, string $searchTerm, string $searchedAt): array
+    {
+        $connection = $this->resource->getConnection();
+
+        $orderTable = $this->resource->getTableName('sales_order');
+        $orderItemTable = $this->resource->getTableName('sales_order_item');
+
+        if (!$connection->isTableExists($orderTable) || !$connection->isTableExists($orderItemTable)) {
+            return [];
+        }
+
+        $conditions = $this->getLoggedInSearchItemMatchConditions('soi', $searchTerm);
+
+        if (empty($conditions)) {
+            return [];
+        }
+
+        $row = $connection->fetchRow(
+            $connection->select()
+                ->from(['so' => $orderTable], ['order_id' => 'entity_id', 'increment_id'])
+                ->join(
+                    ['soi' => $orderItemTable],
+                    'soi.order_id = so.entity_id',
+                    ['sku', 'name', 'created_at']
+                )
+                ->where('so.customer_id = ?', $customerId)
+                ->where('soi.parent_item_id IS NULL')
+                ->where('so.created_at >= ?', $searchedAt)
+                ->where('so.state != ?', 'canceled')
+                ->where('(' . implode(' OR ', $conditions) . ')')
+                ->order('so.created_at ASC')
+                ->limit(1)
+        );
+
+        return is_array($row) ? $row : [];
+    }
+
+    private function getLoggedInSearchItemMatchConditions(string $alias, string $searchTerm): array
+    {
+        $connection = $this->resource->getConnection();
+
+        $values = [];
+        $cleanTerm = trim((string)preg_replace('/\s+/', ' ', strtolower($searchTerm)));
+
+        if ($cleanTerm !== '') {
+            $values[] = $cleanTerm;
+        }
+
+        foreach ($this->getSearchTokens($searchTerm) as $token) {
+            if (strlen($token) >= 3) {
+                $values[] = strtolower($token);
+            }
+        }
+
+        $values = array_values(array_unique(array_filter($values)));
+
+        $conditions = [];
+
+        foreach ($values as $value) {
+            $like = '%' . $value . '%';
+            $conditions[] = $connection->quoteInto('LOWER(' . $alias . '.name) LIKE ?', $like);
+            $conditions[] = $connection->quoteInto('LOWER(' . $alias . '.sku) LIKE ?', $like);
+        }
+
+        return $conditions;
+    }
+
 
     private function getLoggedInSearchLifecycleStatus(array $row): array
     {

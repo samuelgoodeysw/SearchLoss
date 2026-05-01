@@ -1867,7 +1867,7 @@ function catalogEvidenceTooltip($label) {
         </details>
     <?php endif; ?>
 
-    
+
     <details class="searchloss-section searchloss-audit-table-section searchloss-logged-in-search-section" open>
         <summary>
             <div class="searchloss-section-head">
@@ -1893,7 +1893,8 @@ function catalogEvidenceTooltip($label) {
                             <th><?= tooltipLabel('Completed', 'When Magento completed the server-side search response, if recorded.') ?></th>
                             <th><?= tooltipLabel('Response', 'Server-side time between search start and recorded completion.') ?></th>
                             <th><?= tooltipLabel('Results', 'Number of Magento search results recorded for the query, where available.') ?></th>
-                            <th><?= tooltipLabel('Status', 'Lifecycle interpretation for the logged-in search event.') ?></th>
+                            <th><?= tooltipLabel('Lifecycle status', 'Lifecycle interpretation for the logged-in search event.') ?></th>
+                            <th><?= tooltipLabel('Commercial follow-through', 'Whether a later cart or order item appears to match this logged-in search. This is directional matching based on item name/SKU and search wording.') ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1923,6 +1924,15 @@ function catalogEvidenceTooltip($label) {
                                 <td>
                                     <strong><?= $block->escapeHtml($event['lifecycleStatus']) ?></strong><br>
                                     <span class="searchloss-help"><?= $block->escapeHtml($event['lifecycleExplanation']) ?></span>
+                                </td>
+                                <td>
+                                    <strong><?= $block->escapeHtml($event['commercialFollowThroughStatus'] ?? 'Not checked') ?></strong><br>
+                                    <?php if (!empty($event['matchedItemName']) || !empty($event['matchedItemSku'])): ?>
+                                        <span class="searchloss-help">
+                                            Matched: <?= $block->escapeHtml(trim(($event['matchedItemName'] ?? '') . ' ' . ($event['matchedItemSku'] ?? ''))) ?>
+                                        </span><br>
+                                    <?php endif; ?>
+                                    <span class="searchloss-help"><?= $block->escapeHtml($event['commercialFollowThroughExplanation'] ?? '') ?></span>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
