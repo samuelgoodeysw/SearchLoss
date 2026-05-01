@@ -26,13 +26,19 @@ class Ga4SyncCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $count = $this->sync->execute(
-            (string)$input->getArgument('start_date'),
-            (string)$input->getArgument('end_date')
-        );
+        try {
+            $count = $this->sync->execute(
+                (string)$input->getArgument('start_date'),
+                (string)$input->getArgument('end_date')
+            );
 
-        $output->writeln("Synced {$count} GA4 search terms.");
+            $output->writeln("Synced {$count} GA4 search terms.");
 
-        return Command::SUCCESS;
+            return Command::SUCCESS;
+        } catch (\Throwable $exception) {
+            $output->writeln('<error>GA4 sync failed:</error> ' . $exception->getMessage());
+
+            return Command::FAILURE;
+        }
     }
 }
