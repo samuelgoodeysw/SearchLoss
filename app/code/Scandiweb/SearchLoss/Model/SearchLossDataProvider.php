@@ -1903,30 +1903,25 @@ class SearchLossDataProvider
     {
         $connection = $this->resource->getConnection();
 
-        $values = [];
         $cleanTerm = trim((string)preg_replace('/\s+/', ' ', strtolower($searchTerm)));
 
-        if ($cleanTerm !== '') {
-            $values[] = $cleanTerm;
+        if ($cleanTerm === '') {
+            return [];
         }
 
-        foreach ($this->getSearchTokens($searchTerm) as $token) {
-            if (strlen($token) >= 3) {
-                $values[] = strtolower($token);
-            }
-        }
+        /*
+         * Logged-in Search Intelligence should stay customer-event-led.
+         *
+         * Match follow-through against the actual search phrase the logged-in
+         * customer entered, not broad token/keyword matches. Broader keyword
+         * matching belongs in catalogue evidence / failed-search diagnosis.
+         */
+        $like = '%' . $cleanTerm . '%';
 
-        $values = array_values(array_unique(array_filter($values)));
-
-        $conditions = [];
-
-        foreach ($values as $value) {
-            $like = '%' . $value . '%';
-            $conditions[] = $connection->quoteInto('LOWER(' . $alias . '.name) LIKE ?', $like);
-            $conditions[] = $connection->quoteInto('LOWER(' . $alias . '.sku) LIKE ?', $like);
-        }
-
-        return $conditions;
+        return [
+            $connection->quoteInto('LOWER(' . $alias . '.name) LIKE ?', $like),
+            $connection->quoteInto('LOWER(' . $alias . '.sku) LIKE ?', $like),
+        ];
     }
 
 
