@@ -3,6 +3,7 @@ $summary = $block->getSummary();
 $currentPeriod = $block->getCurrentPeriod();
 $rankedTerms = $block->getRankedFailedSearchTerms();
 $lowEngagementTerms = $block->getLowEngagementSearchTerms();
+$loggedInSearchEvents = $block->getLoggedInSearchIntelligence();
 $topOpportunity = $rankedTerms[0] ?? null;
 $topMoneyActions = [];
 $topLowEngagementActions = [];
@@ -1866,7 +1867,72 @@ function catalogEvidenceTooltip($label) {
         </details>
     <?php endif; ?>
 
-    <details class="searchloss-section searchloss-audit-table-section searchloss-failed-search-section">
+    
+    <details class="searchloss-section searchloss-audit-table-section searchloss-logged-in-search-section" open>
+        <summary>
+            <div class="searchloss-section-head">
+                <div>
+                    <h2><?= tooltipLabel('Logged-in Search Intelligence', 'Shows logged-in customer searches captured by Search Loss, including whether Magento completed the search response, response time, result count, and possible search-friction status.') ?></h2>
+                    <p>Customer-level search intent captured from logged-in storefront searches.</p>
+                </div>
+            </div>
+        </summary>
+
+        <?php if (empty($loggedInSearchEvents)): ?>
+            <div class="searchloss-empty">
+                No logged-in customer search events have been captured yet.
+            </div>
+        <?php else: ?>
+            <div class="searchloss-table-wrap">
+                <table class="searchloss-table">
+                    <thead>
+                        <tr>
+                            <th><?= tooltipLabel('Customer', 'The logged-in Magento customer captured at the moment the search started.') ?></th>
+                            <th><?= tooltipLabel('Search term', 'The search query entered by the logged-in customer.') ?></th>
+                            <th><?= tooltipLabel('Started', 'When Magento received the logged-in customer search request.') ?></th>
+                            <th><?= tooltipLabel('Completed', 'When Magento completed the server-side search response, if recorded.') ?></th>
+                            <th><?= tooltipLabel('Response', 'Server-side time between search start and recorded completion.') ?></th>
+                            <th><?= tooltipLabel('Results', 'Number of Magento search results recorded for the query, where available.') ?></th>
+                            <th><?= tooltipLabel('Status', 'Lifecycle interpretation for the logged-in search event.') ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($loggedInSearchEvents as $event): ?>
+                            <tr>
+                                <td>
+                                    <strong><?= $block->escapeHtml($event['customerName'] ?: ('Customer #' . (int)$event['customerId'])) ?></strong><br>
+                                    <span class="searchloss-help"><?= $block->escapeHtml($event['customerEmail']) ?></span>
+                                </td>
+                                <td><?= $block->escapeHtml($event['searchTerm']) ?></td>
+                                <td><?= $block->escapeHtml($event['searchedAt']) ?></td>
+                                <td><?= $block->escapeHtml($event['completedAt'] ?: 'Not recorded') ?></td>
+                                <td>
+                                    <?php if ($event['responseTimeMs'] === null): ?>
+                                        Not recorded
+                                    <?php else: ?>
+                                        <?= (int)$event['responseTimeMs'] ?>ms
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if ($event['resultsCount'] === null): ?>
+                                        Not recorded
+                                    <?php else: ?>
+                                        <?= (int)$event['resultsCount'] ?>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <strong><?= $block->escapeHtml($event['lifecycleStatus']) ?></strong><br>
+                                    <span class="searchloss-help"><?= $block->escapeHtml($event['lifecycleExplanation']) ?></span>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </details>
+
+<details class="searchloss-section searchloss-audit-table-section searchloss-failed-search-section">
         <summary class="searchloss-section-header">
             <div class="searchloss-section-head">
                 <div class="searchloss-section-copy">

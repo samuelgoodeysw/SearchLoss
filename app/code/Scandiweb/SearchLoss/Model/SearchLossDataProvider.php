@@ -1682,6 +1682,121 @@ class SearchLossDataProvider
         }
     }
 
+
+    public function getLoggedInSearchIntelligence(): array
+    {
+        $connection = $this->resource->getConnection();
+        $table = $this->resource->getTableName('scandiweb_searchloss_search_event');
+
+        if (!$connection->isTableExists($table)) {
+            return [];
+        }
+
+        $customerTable = $this->resource->getTableName('customer_entity');
+
+        $rows = $connection->fetchAll(
+            $connection->select()
+                ->from(['se' => $table], [
+                    'event_id',
+                    'searched_at',
+                    'completed_at',
+                    'response_time_ms',
+                    'completion_status',
+                    'store_id',
+                    'customer_id',
+                    'search_term',
+                    'results_count',
+                    'source',
+                ])
+                ->joinLeft(
+                    ['ce' => $customerTable],
+                    'ce.entity_id = se.customer_id',
+                    [
+                        'customer_email' => 'email',
+                        'customer_firstname' => 'firstname',
+                        'customer_lastname' => 'lastname',
+                    ]
+                )
+                ->order('se.searched_at DESC')
+                ->limit(50)
+        );
+
+        $events = [];
+
+        foreach ($rows as $row) {
+            $status = $this->getLoggedInSearchLifecycleStatus($row);
+            $responseTimeMs = $row['response_time_ms'] === null ? null : (int)$row['response_time_ms'];
+            $resultsCount = $row['results_count'] === null ? null : (int)$row['results_count'];
+
+            $events[] = [
+                'eventId' => (int)$row['event_id'],
+                'searchedAt' => (string)$row['searched_at'],
+                'completedAt' => $row['completed_at'] === null ? null : (string)$row['completed_at'],
+                'responseTimeMs' => $responseTimeMs,
+                'completionStatus' => (string)$row['completion_status'],
+                'storeId' => (int)$row['store_id'],
+                'customerId' => (int)$row['customer_id'],
+                'customerEmail' => (string)($row['customer_email'] ?? ''),
+                'customerName' => trim((string)($row['customer_firstname'] ?? '') . ' ' . (string)($row['customer_lastname'] ?? '')),
+                'searchTerm' => (string)$row['search_term'],
+                'resultsCount' => $resultsCount,
+                'source' => (string)$row['source'],
+                'lifecycleStatus' => $status['label'],
+                'lifecycleExplanation' => $status['explanation'],
+                'isPossibleSearchFriction' => $status['isPossibleSearchFriction'],
+            ];
+        }
+
+        return $events;
+    }
+
+    private function getLoggedInSearchLifecycleStatus(array $row): array
+    {
+        $completionStatus = (string)($row['completion_status'] ?? 'started');
+        $completedAt = $row['completed_at'] ?? null;
+        $responseTimeMs = $row['response_time_ms'] === null ? null : (int)$row['response_time_ms'];
+        $resultsCount = $row['results_count'] === null ? null : (int)$row['results_count'];
+
+        if ($completionStatus === 'started' && $completedAt === null) {
+            return [
+                'label' => 'Search started, completion not recorded',
+                'explanation' => 'Magento received the logged-in customer search, but no completed server response was recorded. This may indicate search speed, timeout, cancellation, page failure, or another search-friction issue.',
+                'isPossibleSearchFriction' => true,
+            ];
+        }
+
+        if ($completionStatus === 'server_completed' && $resultsCount === 0) {
+            return [
+                'label' => 'Completed, zero results',
+                'explanation' => 'Magento completed the search response, but returned zero results.',
+                'isPossibleSearchFriction' => true,
+            ];
+        }
+
+        if ($completionStatus === 'server_completed' && $responseTimeMs !== null && $responseTimeMs >= 3000) {
+            return [
+                'label' => 'Completed slowly',
+                'explanation' => 'Magento completed the search response, but the response time was high enough to review as a possible search-speed issue.',
+                'isPossibleSearchFriction' => true,
+            ];
+        }
+
+        if ($completionStatus === 'server_completed') {
+            return [
+                'label' => 'Completed',
+                'explanation' => 'Magento recorded a completed server response for this logged-in customer search.',
+                'isPossibleSearchFriction' => false,
+            ];
+        }
+
+        return [
+            'label' => 'Needs review',
+            'explanation' => 'This logged-in search event has an unexpected lifecycle state and should be reviewed.',
+            'isPossibleSearchFriction' => true,
+        ];
+    }
+
+
     public function getOpportunityInsights(): array
     {
         $connection = $this->resource->getConnection();
@@ -1852,6 +1967,10 @@ class SearchLossDataProvider
             [
                 'key' => 'lowEngagementSearchTerms',
                 'value' => $this->getLowEngagementSearchTerms()
+            ],
+            [
+                'key' => 'loggedInSearchIntelligence',
+                'value' => $this->getLoggedInSearchIntelligence()
             ]
         ];
     }
