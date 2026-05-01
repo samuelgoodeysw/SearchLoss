@@ -125,20 +125,20 @@ Possible useful signals:
 - search latency or timeout evidence
 - logged-in customer/account identity where approved
 
-This could become especially useful for B2B sales and customer-service follow-up.
+This could become especially useful for B2B client review.
 
-For example, a future report could show accounts that searched for commercially meaningful terms but did not continue to product, cart, quote, or order activity.
+For example, a future report could show commercially meaningful searches that did not continue to product, cart, quote, or order activity.
 
 Use careful wording unless instrumentation proves true abandonment:
 
 - possible search abandonment
 - searched but did not continue
 - search session ended without engagement
-- account follow-up opportunity
+- abandonment data opportunity
 
 Do not claim the customer left before search completed unless search-start, search-complete, latency, and page-leave events prove it.
 
-Named-account follow-up should be treated as an optional follow-on use case. The client may have customer accounts, but using search behaviour to trigger sales/customer-service outreach is a different operational workflow from an aggregated audit.
+Named-account follow-up should be treated as an optional follow-on use case. The client may have customer accounts, but using search behaviour to trigger client review is a different operational workflow from an aggregated audit.
 
 ## Current features
 
@@ -441,7 +441,7 @@ The audit can open follow-up work around:
 - Adobe Live Search implementation or optimisation
 - GA4/search tracking
 - search speed and abandonment instrumentation
-- account-level sales/customer-service follow-up workflow
+- abandonment and unresolved-search reporting
 - ongoing Search Loss dashboard installation later
 
 Only propose installing the module after the audit has landed well and the client wants ongoing visibility.

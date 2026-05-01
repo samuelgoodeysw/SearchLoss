@@ -199,32 +199,32 @@ Without that instrumentation, use careful wording such as:
 - possible search abandonment
 - search session ended without engagement
 - searched but did not continue to product, cart, quote, or order
-- account-level follow-up opportunity
+- abandonment data opportunity
 
 Do not claim the customer left before search completed unless the instrumentation proves it.
 
-## Future account-level follow-up
+## Future abandonment data output
 
-For B2B stores, abandoned or unresolved searches can become sales/customer-service opportunities.
+For B2B stores, unresolved or abandoned searches can become a useful data set for the client to review.
+
+The audit should stay data-led and avoid prescribing account outreach.
 
 Possible future output:
 
-- account or company
-- customer/contact if approved
 - search term
-- search timestamp
+- search timestamp or date range
 - result status
 - engagement status
-- suggested follow-up
+- search count
+- affected account count where available and approved
 - likely product/category area
+- suggested review area
 
-This should be positioned as optional follow-on work.
-
-The reason is not that the client lacks access to their customers. The reason is that named-account follow-up is a different operational use case from an aggregated search audit.
+This should be positioned as data the client can interpret and act on themselves.
 
 Safer wording:
 
-Account-level follow-up can be included if the client wants the audit to support sales/customer-service outreach.
+Search abandonment data can highlight where users appear to stop after searching, but the client decides what action, if any, to take.
 
 ## How this leads to follow-on work
 
@@ -239,7 +239,7 @@ The audit can naturally lead into:
 - Adobe Live Search implementation or optimisation
 - GA4/search tracking improvement
 - search latency and abandonment instrumentation
-- account-level sales/customer-service follow-up workflow
+- abandonment and unresolved-search reporting
 - ongoing Search Loss dashboard installation
 
 ## When to propose the module
@@ -270,7 +270,7 @@ The first audit should not promise:
 - long-term monitoring dashboard
 - AI-generated automatic fixes
 - true search-abandonment proof without instrumentation
-- named-account outreach workflow unless explicitly included
+- account-specific action recommendations unless explicitly requested
 
 Those can become follow-on work after the audit.
 
@@ -286,7 +286,7 @@ Use:
 - prioritised review list
 - evidence-led recommendations
 - possible search abandonment
-- account follow-up opportunity
+- abandonment data opportunity
 
 Avoid:
 
