@@ -9,6 +9,9 @@ class Probe
     private const XML_PATH_ENABLED = 'searchloss/ga4/enabled';
     private const XML_PATH_PROPERTY_ID = 'searchloss/ga4/property_id';
     private const XML_PATH_CREDENTIALS_JSON = 'searchloss/ga4/credentials_json';
+    private const XML_PATH_OAUTH_CLIENT_ID = 'searchloss/ga4/oauth_client_id';
+    private const XML_PATH_OAUTH_CLIENT_SECRET = 'searchloss/ga4/oauth_client_secret';
+    private const XML_PATH_OAUTH_REFRESH_TOKEN = 'searchloss/ga4/oauth_refresh_token';
 
     private const TOKEN_SCOPE = 'https://www.googleapis.com/auth/analytics.readonly';
     private const TOKEN_URI = 'https://oauth2.googleapis.com/token';
@@ -25,6 +28,9 @@ class Probe
         $enabled = $this->scopeConfig->isSetFlag(self::XML_PATH_ENABLED);
         $propertyId = $this->normalisePropertyId((string)$this->scopeConfig->getValue(self::XML_PATH_PROPERTY_ID));
         $credentialsJson = trim((string)$this->scopeConfig->getValue(self::XML_PATH_CREDENTIALS_JSON));
+        $oauthClientId = trim((string)$this->scopeConfig->getValue(self::XML_PATH_OAUTH_CLIENT_ID));
+        $oauthClientSecret = trim((string)$this->scopeConfig->getValue(self::XML_PATH_OAUTH_CLIENT_SECRET));
+        $oauthRefreshToken = trim((string)$this->scopeConfig->getValue(self::XML_PATH_OAUTH_REFRESH_TOKEN));
 
         $results[] = $this->line(
             'GA4 sync enabled',
@@ -45,22 +51,37 @@ class Probe
 
         $results[] = $this->line('GA4 property ID', 'PASS', 'Using property ID: ' . $propertyId);
 
-        try {
-            $credentials = $this->parseCredentials($credentialsJson);
-            $results[] = $this->line('Service account JSON', 'PASS', 'Credentials JSON contains client_email and private_key.');
-        } catch (\Throwable $exception) {
-            $results[] = $this->line('Service account JSON', 'FAIL', $exception->getMessage());
-            $results[] = $this->line('Recommended mode', 'FAIL', 'Disable low-engagement section until service account credentials are configured.');
-            return $results;
-        }
+        $hasOauthCredentials = $oauthClientId !== '' && $oauthClientSecret !== '' && $oauthRefreshToken !== '';
 
-        try {
-            $accessToken = $this->getAccessToken($credentials);
-            $results[] = $this->line('GA4 authentication', 'PASS', 'Access token created successfully.');
-        } catch (\Throwable $exception) {
-            $results[] = $this->line('GA4 authentication', 'FAIL', $exception->getMessage());
-            $results[] = $this->line('Recommended mode', 'FAIL', 'Disable low-engagement section until authentication works.');
-            return $results;
+        if ($hasOauthCredentials) {
+            $results[] = $this->line('OAuth credentials', 'PASS', 'OAuth client ID, client secret, and refresh token are configured.');
+
+            try {
+                $accessToken = $this->getOauthAccessToken($oauthClientId, $oauthClientSecret, $oauthRefreshToken);
+                $results[] = $this->line('GA4 authentication', 'PASS', 'OAuth refresh token created an access token successfully.');
+            } catch (\Throwable $exception) {
+                $results[] = $this->line('GA4 authentication', 'FAIL', $exception->getMessage());
+                $results[] = $this->line('Recommended mode', 'FAIL', 'Disable low-engagement section until OAuth authentication works.');
+                return $results;
+            }
+        } else {
+            try {
+                $credentials = $this->parseCredentials($credentialsJson);
+                $results[] = $this->line('Service account JSON', 'PASS', 'Credentials JSON contains client_email and private_key.');
+            } catch (\Throwable $exception) {
+                $results[] = $this->line('Service account JSON', 'FAIL', $exception->getMessage());
+                $results[] = $this->line('Recommended mode', 'FAIL', 'Disable low-engagement section until GA4 credentials are configured.');
+                return $results;
+            }
+
+            try {
+                $accessToken = $this->getAccessToken($credentials);
+                $results[] = $this->line('GA4 authentication', 'PASS', 'Service account access token created successfully.');
+            } catch (\Throwable $exception) {
+                $results[] = $this->line('GA4 authentication', 'FAIL', $exception->getMessage());
+                $results[] = $this->line('Recommended mode', 'FAIL', 'Disable low-engagement section until authentication works.');
+                return $results;
+            }
         }
 
         $searchTermRows = 0;
@@ -169,6 +190,37 @@ class Probe
         }
 
         return $data;
+    }
+
+    private function getOauthAccessToken(string $clientId, string $clientSecret, string $refreshToken): string
+    {
+        $response = $this->curl(
+            'POST',
+            self::TOKEN_URI,
+            [
+                'Content-Type: application/x-www-form-urlencoded',
+            ],
+            http_build_query([
+                'client_id' => $clientId,
+                'client_secret' => $clientSecret,
+                'refresh_token' => $refreshToken,
+                'grant_type' => 'refresh_token',
+            ])
+        );
+
+        if ($response['status'] < 200 || $response['status'] >= 300) {
+            throw new \RuntimeException(
+                'OAuth refresh-token request failed with HTTP ' . $response['status'] . ': ' . $response['body']
+            );
+        }
+
+        $data = json_decode($response['body'], true);
+
+        if (!is_array($data) || empty($data['access_token'])) {
+            throw new \RuntimeException('OAuth token response did not include access_token.');
+        }
+
+        return (string)$data['access_token'];
     }
 
     private function getAccessToken(array $credentials): string
