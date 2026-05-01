@@ -1,141 +1,222 @@
-# Search Loss Audit for Magento 2
+# Search Loss Audit
 
-Search Loss Audit is a Magento-native search audit and diagnosis module.
+Search Loss Audit is a Magento search audit and diagnosis module.
 
-It helps merchants understand where customer search demand is being missed, what that missed demand may be worth, and what Magento should review first.
+It helps merchants identify missed search demand, review Magento catalogue evidence, estimate directional commercial value, and prioritise what to review first.
 
-Search Loss Audit focuses first on failed searches:
+It is not a search engine, not a replacement for Algolia, Klevu, Adobe Live Search, or Searchspring, and not a guaranteed lost-revenue calculator.
 
-> Customer searched -> Magento returned zero results.
-
-The module turns those failed searches into a prioritised audit view with diagnosis, supporting Magento evidence, and recommended review/fix steps.
-
----
-
-## What Search Loss Audit does
+## What it does
 
 Search Loss Audit helps answer:
 
 - What are customers searching for but not finding?
 - Which failed searches happen most often?
-- Which missed searches may represent the most estimated demand value?
-- Does Magento already contain related products, categories, SKUs, or product attributes?
-- Is the likely issue catalogue coverage, product data, SKU/part-number matching, search configuration, product visibility, stock, website assignment, or manual review?
+- Which missed searches may represent the most value?
+- Does Magento already contain related product, SKU, category, or catalogue data?
+- Is the likely issue catalogue coverage, product visibility, website assignment, category assignment, searchable attributes, synonyms, SKU matching, or search configuration?
+- Which searches returned results but did not lead to meaningful engagement?
 - What should the merchant review first?
 
-The goal is not to replace Magento search or a third-party search platform. The goal is to provide a practical audit layer that shows where search may be leaking demand and what should be investigated first.
+## Product positioning
 
----
+Search Loss Audit is best positioned as:
 
-## Current admin location
+Search Loss Audit is a Magento search audit and diagnosis tool that shows where customer search demand is being missed, what it may be worth, and what Magento should review first.
 
-```text
-Reports -> Business Intelligence -> Search Loss Audit
-```
+The strongest commercial offer is a fixed audit:
 
-Technical module namespace and path remain unchanged:
+A Search Loss Audit that produces a prioritised list of search issues, supporting Magento evidence, and recommended fixes.
 
-```text
-Scandiweb_SearchLoss
-app/code/Scandiweb/SearchLoss
-```
+Use careful value wording:
 
----
+- Est. Demand Value
+- directional demand value
+- estimated demand at risk
+- potential search opportunity
+
+Avoid:
+
+- guaranteed lost revenue
+- exact lost revenue
+- proven recovery
+
+## Diagnostic layers
+
+### Phase 1: Failed Searches
+
+A failed search is:
+
+    Customer searched -> Magento returned zero results
+
+This layer uses Magento-native data and does not require GA4.
+
+It helps diagnose:
+
+- missing product or category coverage
+- poor product/category naming
+- SKU or part-number matching issues
+- missing synonyms or search terms
+- product visibility/status issues
+- website/category assignment issues
+- searchable attribute gaps
+- stock or salability review areas
+- search configuration problems
+
+### Phase 2: Searches With Low Engagement
+
+A low-engagement search is:
+
+    Customer searched -> results or page activity existed -> customer did not meaningfully move forward
+
+This layer uses GA4 enrichment where the store actually tracks usable data.
+
+It helps diagnose:
+
+- weak search result relevance
+- poor ranking
+- low product engagement after search
+- low add-to-cart after product views
+- low purchase after add-to-cart
+- product-page confidence issues
+- search terms that drive revenue and should be monitored, not treated as loss items
+
+GA4 is optional enrichment. Search Loss Audit should still work as a Magento failed-search audit if GA4 data is not available.
 
 ## Current features
 
-### Audit snapshot
+- Magento admin dashboard
+- REST API endpoint
+- failed search term analysis
+- Est. Demand Value calculation
+- opportunity scoring
+- catalogue-aware diagnosis
+- product, SKU, category, and identity attribute signal checks
+- product visibility and assignment evidence
+- searchable attribute evidence
+- stock evidence
+- suggested Magento fixes
+- expanded diagnostic rows
+- CSV export
+- basic bot/noise filtering
+- Configure audit panel
+- configurable identity attributes
+- configurable ignored terms
+- configurable minimum failed-search volume
+- real GA4 probe command
+- real GA4 sync command
+- GA4 search URL q parameter extraction
+- GA4 searchTerm support where available
+- GA4 ecommerce engagement metrics where available
+- configurable GA4 low-engagement thresholds
 
-The audit snapshot gives a quick commercial overview:
+## Admin location
 
-- Failed Terms
-- Failed Searches
-- Est. Demand Value
-- AOV
-- Search-to-order rate
+Reports -> Business Intelligence -> Search Loss Audit
 
-Est. Demand Value is directional. It is not guaranteed lost revenue.
+## REST endpoint
+
+/rest/V1/search-loss/dashboard
+
+The endpoint returns key/value blocks including:
+
+- searchData
+- failedSearchTerms
+- lowEngagementSearchTerms
+
+## Main files
+
+- app/code/Scandiweb/SearchLoss/Model/SearchLossDataProvider.php
+- app/code/Scandiweb/SearchLoss/Model/SearchLoss.php
+- app/code/Scandiweb/SearchLoss/Api/SearchLossInterface.php
+- app/code/Scandiweb/SearchLoss/etc/webapi.xml
+- app/code/Scandiweb/SearchLoss/view/adminhtml/templates/dashboard.phtml
+- app/code/Scandiweb/SearchLoss/Model/Ga4/Probe.php
+- app/code/Scandiweb/SearchLoss/Model/Ga4/Sync.php
+- app/code/Scandiweb/SearchLoss/Console/Command/Ga4ProbeCommand.php
+- app/code/Scandiweb/SearchLoss/Console/Command/Ga4SyncCommand.php
+
+## Data sources
+
+Search Loss Audit currently uses Magento-native data such as:
+
+- search_query
+- sales_order
+- catalog product EAV tables
+- category EAV tables
+- product website assignment
+- product category assignment
+- product status
+- product visibility
+- stock status
+- searchable/catalog attribute configuration
+- configured product identity attributes
+
+For GA4 enrichment, Search Loss Audit uses:
+
+- GA4 searchTerm where available
+- Magento search-result URLs such as /catalogsearch/result/?q=...
+- GA4 engagement/ecommerce metrics where attributable
+
+## Est. Demand Value model
+
+Est. Demand Value is directional, not guaranteed lost revenue.
 
 Current model:
 
-```text
-failed search count x average order value x search-to-order rate
-```
+    failed search count x average order value x search-to-order rate
 
-Use this as a prioritisation signal, not an exact revenue claim.
+Use this as a prioritisation signal, not an exact financial claim.
 
----
+## GA4 enrichment
 
-### Top money actions
+GA4 enrichment is probe-first.
 
-The Top money actions section groups failed search findings by fix effort bucket.
+Before relying on Phase 2, run:
 
-It helps merchants quickly see which types of work may matter most, such as:
+    bin/magento searchloss:ga4:probe today today
 
-- Attribute/search configuration fix
-- Catalogue coverage review
-- Catalogue data fix
-- Manual review
+The probe checks:
 
-Cards are clickable and filter the findings table by work type.
+- whether GA4 is enabled
+- whether property/authentication is configured
+- whether GA4 search terms are available
+- whether Magento search-result URLs can be queried and parsed
+- whether engagement/ecommerce metrics are attributable by search term
 
----
+If the probe passes, run:
 
-### Prioritized search findings
+    bin/magento searchloss:ga4:sync today today
 
-The main audit table shows:
+The sync writes rows into:
 
-- Term
-- Searches
-- Est. Demand Value
-- Priority
-- Diagnosis
-- Recommended Next Step
-- Diagnosis/details cue
+    scandiweb_searchloss_ga4_term
 
-Rows are clickable. Expanding a row shows the full diagnosis, recommended fix, and supporting Magento evidence.
+Search Loss Audit should not show guessed GA4 engagement data. Probe first; enable only what the store actually tracks.
 
----
+## Configurable low-engagement thresholds
 
-### Expanded diagnosis rows
+The Configure audit panel includes GA4 threshold settings:
 
-Expanded rows are organised as:
+- Minimum searches for low-engagement flag
+- Low product engagement below (%)
+- Low add-to-cart below (%)
+- Low purchase below (%)
+- Healthy purchase signal at (%)
 
-1. Diagnosis
-2. Recommended fix
-3. Evidence
+Default behaviour:
 
-#### Diagnosis
+- Minimum searches for low-engagement flag: 5
+- Low product engagement below: 20%
+- Low add-to-cart below: 10%
+- Low purchase below: 3%
+- Healthy purchase signal at: 5%
 
-Plain-English explanation of what the failed search likely means.
+These thresholds are intentionally configurable because different stores have different traffic levels, buying cycles, and expectations.
 
-#### Recommended fix
+## Diagnosis examples
 
-Includes:
-
-- Magento admin shortcuts
-- full suggested fix text
-- step-by-step Magento checks/fixes
-
-Current shortcuts include:
-
-- Products
-- Categories
-- Search terms
-- Indexes
-- Cache
-
-#### Evidence
-
-Shows the Magento evidence behind the diagnosis, including catalogue, product, stock, website, category, identity attribute, and searchable attribute signals.
-
----
-
-## Current diagnosis types
-
-Search Loss Audit currently uses rule-based, evidence-led diagnosis. It does not use an LLM to generate recommendations.
-
-Current diagnosis types include:
+Search Loss Audit can classify issues such as:
 
 - Product exists but search is not matching it
 - Product exists but is disabled
@@ -145,430 +226,156 @@ Current diagnosis types include:
 - Product exists but may be out of stock
 - SKU or part number is not matching
 - Brand or product terms are missing
+- Customers use different wording
 - Spelling or format variant
-- Fitment or use case is unclear
 - Product or category may be missing
+- Fitment or use case is unclear
 - Search term is too broad or unclear
+- Results are weak or badly ranked
+- High searches, low product engagement
+- Product views, low add-to-cart
+- Add-to-cart, low purchase
+- Healthy revenue signal
 - Needs manual review
-
----
-
-## Magento evidence checked
-
-Search Loss Audit uses Magento-native evidence where available.
-
-Current checks include:
-
-- failed search terms from `search_query`
-- failed search popularity/count
-- average order value from `sales_order`
-- search-to-order rate
-- product name matches
-- SKU matches
-- category name matches
-- related keyword product matches
-- related keyword category matches
-- product enabled/disabled status
-- product visibility
-- website assignment
-- category assignment
-- stock status
-- searchable product attribute configuration
-- identity attributes such as manufacturer, brand, MPN, model, part number, OEM, supplier, or vendor where present
-
----
-
-## Searchable attribute evidence
-
-Search Loss Audit checks whether important product fields exist and whether they are searchable.
-
-Current evidence includes:
-
-- Core product fields found
-- Searchable core product fields
-- Non-searchable core product fields
-- Core field search coverage
-- Identity fields found
-- Searchable identity fields
-- Non-searchable identity fields
-- Identity field search coverage
-
-This helps support diagnoses such as:
-
-> Related products exist, but the relevant fields may not be configured as searchable.
-
-Core product fields checked include:
-
-- name
-- SKU
-- description
-- short description
-
-Identity attribute candidates include:
-
-- manufacturer
-- brand
-- MPN
-- part number
-- product code
-- model
-- OEM
-- supplier
-- vendor
-
-The module discovers which of these attributes exist in the Magento catalogue instead of hard-coding one client-specific field.
-
----
-
-## API endpoint
-
-Search Loss Audit exposes dashboard/audit data through a Magento REST endpoint:
-
-```text
-/rest/V1/search-loss/dashboard
-```
-
-The same backend provider powers both:
-
-- Magento admin dashboard
-- REST API response
-
-Main backend provider:
-
-```text
-app/code/Scandiweb/SearchLoss/Model/SearchLossDataProvider.php
-```
-
-This keeps the admin UI and API output aligned.
-
----
-
-## Data sources
-
-Current Magento-native data sources include:
-
-```text
-search_query
-sales_order
-catalog_product_entity
-catalog_product_entity_varchar
-catalog_product_entity_text
-catalog_product_entity_int
-catalog_product_website
-catalog_category_product
-catalog_category_entity_varchar
-cataloginventory_stock_status
-eav_attribute
-eav_entity_type
-eav_attribute_option
-eav_attribute_option_value
-catalog_eav_attribute
-```
-
----
-
-## Exports
-
-The admin page currently includes two export actions:
-
-- Download current view
-- Download all findings
-
-The export is designed to support audit review and client discussion.
-
----
 
 ## Market positioning
 
-Search Loss Audit is a Magento search audit and diagnosis tool.
+Search Loss Audit is not a replacement for Algolia, Klevu, Adobe Live Search, Searchspring, or similar search platforms.
 
-It is not:
+Those tools improve the search experience itself: ranking, relevance, autocomplete, typo tolerance, merchandising, and search result quality.
 
-- a search engine
-- an Adobe Live Search replacement
-- an Algolia, Klevu, or Searchspring replacement
-- a guaranteed lost-revenue calculator
-- a generic analytics dashboard
-- an AI automation product
+Search Loss Audit is a diagnostic and opportunity layer. It helps merchants understand where Magento search may be leaking demand, what that missed demand may be worth, and what should be reviewed first.
 
-Search platforms such as Algolia, Klevu, Adobe Live Search, Searchspring, and similar tools focus on the search experience itself:
+It can be useful before, during, or after a larger search improvement project.
 
-- relevance
-- autocomplete
-- typo tolerance
-- merchandising
-- ranking
-- behavioural analytics
-- conversions
+## Suggested pitch
 
-Search Loss Audit sits before, beside, or after those tools as a diagnostic layer.
+Search Loss Audit reviews Magento site search and shows which search issues may represent missed demand, why they may be happening, and what to review first.
 
-It helps merchants understand:
+A slightly fuller version:
 
-- what customers searched for but could not find
-- whether related catalogue evidence already exists
-- whether the problem looks like product data, visibility, stock, SKU matching, attribute searchability, synonyms, or search configuration
-- which search problems should be reviewed first
-- what directional demand value may be attached to those problems
-
----
-
-## Recommended commercial framing
-
-Strongest near-term offer:
-
-```text
-Fixed Search Loss Audit
-```
-
-Suggested audit output:
-
-- top failed search opportunities
-- search volume
-- estimated demand value
-- likely diagnosis
-- supporting Magento evidence
-- fix effort bucket
-- recommended next step
-- prioritised fix list
-- client review session or written summary
-
-Suggested positioning:
-
-> Search Loss Audit is a low-risk Magento search diagnosis. It uses search data the store already has, checks failed searches against Magento catalogue evidence, estimates directional demand value, and gives a prioritised list of what to review first.
-
----
-
-## Revenue and demand value wording
-
-Use careful directional language.
-
-Recommended wording:
-
-- Est. Demand Value
-- Estimated demand value
-- Directional demand value
-- Potential search opportunity
-- Estimated revenue at risk
-
-Avoid overclaiming:
-
-- guaranteed lost revenue
-- exact revenue loss
-- proven recovered revenue
-
-Suggested disclaimer:
-
-> Estimated demand value is directional. It highlights where search friction may be blocking product discovery, not guaranteed lost revenue.
-
----
+Search Loss Audit uses Magento data, and optional GA4 enrichment, to identify failed searches and weak searches, check supporting catalogue evidence, estimate directional demand value, and produce a prioritised review list.
 
 ## Hyva compatibility
 
-The current module should be safe for Hyva-based storefronts because it has no storefront frontend footprint.
+The current admin/audit functionality is focused on:
 
-The module is currently:
+- Magento admin
+- REST API
+- database-read analysis
 
-- Magento Admin focused
-- REST API focused
-- database-read focused
+The GA4 frontend tag is optional and should be treated as validation/enrichment rather than core storefront functionality.
 
-It does not currently depend on:
+If future tracking is expanded, it should remain Hyva-compatible or theme-neutral.
 
-- Luma storefront templates
-- Knockout storefront components
-- RequireJS storefront behaviour
-- Magento frontend UI components
-- checkout frontend code
+## Known limitations
 
-Future weak-search tracking may require storefront tracking. If added, it should be implemented in a Hyva-compatible or theme-neutral way.
+- Est. Demand Value is directional.
+- GA4 enrichment depends on the store's actual GA4 tracking quality.
+- GA4 search terms and engagement metrics must be validated with the probe.
+- Some stores may have limited or noisy Magento search_query history.
+- Third-party search platforms may not populate Magento native search data fully.
+- Recommendation logic is rule-based, not LLM-generated.
+- Search Loss Audit recommends checks and fixes but does not automatically modify catalogue data.
+- The module has been validated locally, but broader client install hardening is still needed.
 
----
+## Development commands
+
+Check PHP syntax:
+
+    php -l app/code/Scandiweb/SearchLoss/Model/SearchLossDataProvider.php
+    php -l app/code/Scandiweb/SearchLoss/Block/Adminhtml/Dashboard.php
+    php -l app/code/Scandiweb/SearchLoss/Controller/Adminhtml/Config/Save.php
+    php -l app/code/Scandiweb/SearchLoss/Controller/Adminhtml/Export/All.php
+    php -l app/code/Scandiweb/SearchLoss/view/adminhtml/templates/dashboard.phtml
+    php -l app/code/Scandiweb/SearchLoss/Console/Command/Ga4ProbeCommand.php
+    php -l app/code/Scandiweb/SearchLoss/Console/Command/Ga4SyncCommand.php
+    php -l app/code/Scandiweb/SearchLoss/Model/Ga4/Probe.php
+    php -l app/code/Scandiweb/SearchLoss/Model/Ga4/Sync.php
+
+Flush cache:
+
+    bin/magento cache:flush
+
+Test REST endpoint:
+
+    curl -i http://localhost/rest/V1/search-loss/dashboard
+
+Probe GA4:
+
+    bin/magento searchloss:ga4:probe today today
+
+Sync GA4:
+
+    bin/magento searchloss:ga4:sync today today
+
+Compile:
+
+    rm -rf generated/code/* generated/metadata/* var/cache/* var/page_cache/* var/di/*
+    bin/magento setup:di:compile
+    bin/magento cache:flush
+
+## Packaging notes
+
+Before broader installation or marketplace-style packaging, review:
+
+- composer install flow
+- module version
+- licence
+- ACL labels
+- admin menu labels
+- REST API ACL
+- customer-facing documentation
+- compatibility matrix
+- production-safe install instructions
+- admin shortcut safety
+- no test tokens or local-only credentials
+- no local-only permission guidance
+- MSI/salability handling for larger Adobe Commerce installs
 
 ## Performance testing note
 
-Local stress testing was completed using a removable `SLTEST` dataset in Magento's `search_query` table.
+Local stress testing was completed using a removable SLTEST dataset in Magento's search_query table.
 
 Test summary:
 
 - 5,000 additional failed-search rows were inserted for stress testing.
-- The API response stayed capped to the prioritised findings set rather than returning every failed term.
+- The API response stayed capped to the prioritized findings set rather than returning every failed term.
 - The REST endpoint remained fast locally, responding in roughly 0.5 seconds during the 5,000-row test.
 - The response size stayed controlled at around 60 KB.
 - The stress rows were removed after testing.
 
-This supports the current MVP approach: Search Loss Audit should behave as a prioritised audit view, not a full raw export of every historical failed search.
-
-For larger production catalogues, the recommended approach is still:
+This supports the current MVP approach:
 
 - rank failed searches first
 - deep-diagnose only the highest-priority findings
 - keep endpoint output capped
 - avoid returning every raw search row in the dashboard
 
----
+## Commercial readiness
 
-## Current limitations
+Search Loss Audit is closest to being sold as a fixed audit/service offer, not as a self-serve extension yet.
 
-Search Loss Audit is currently focused on failed searches only.
+Recommended near-term offer:
 
-A failed search means:
+Fixed Search Loss Audit
 
-```text
-Customer searched -> Magento returned zero results
-```
+Includes:
 
-It does not yet fully analyse weak searches.
+- setup or dashboard review
+- failed-search analysis
+- optional GA4 enrichment if available
+- top missed-demand opportunities
+- catalogue/search diagnosis
+- prioritised fix list
+- client review session or written summary
 
-A weak search would mean:
+This can open follow-up work around:
 
-```text
-Customer searched -> Magento returned results -> customer did not meaningfully engage
-```
-
-Weak-search analysis likely requires GA4, onsite tracking, or search platform analytics because Magento's native `search_query` table does not reliably show product clicks, add-to-cart events, quote requests, or purchases after search.
-
----
-
-## Roadmap
-
-### Phase 1: Failed Searches
-
-Current phase.
-
-Identifies:
-
-- missing catalogue coverage
-- weak product/category naming
-- missing synonyms
-- SKU or part-number matching issues
-- search configuration issues
-- visibility/status/website/category/stock issues
-- searchable attribute problems
-
-### Phase 2: Weak Searches
-
-Future phase.
-
-Would identify searches that returned results but did not lead to meaningful engagement.
-
-Possible signals:
-
-- low product click-through after search
-- low add-to-cart after search
-- low quote/request after search
-- low purchase conversion after search
-- search refinement rate
-- search abandonment rate
-
-Likely data sources:
-
-- GA4
-- onsite tracking
-- search platform analytics
-
-### Phase 3: Search Opportunity Control Center
-
-Possible future broader product:
-
-- Failed Searches
-- Weak Searches
-- Catalogue Gaps
-- Product Data Health
-- Search Configuration Issues
-- Merchandising Opportunities
-- Revenue Recovery Opportunities
-- Workflow / assignment / resolution tracking
-
----
-
-## Package readiness checklist
-
-Before broader installation or marketplace-style packaging, review:
-
-- `composer.json`
-- `module.xml` version
-- README/customer-facing documentation
-- ACL labels
-- admin menu labels
-- REST API ACL
-- no test tokens
-- no dev-only wording
-- no production-unsafe instructions
-- compatibility matrix
-- install/upgrade instructions
-- no unnecessary storefront assets
-
----
-
-## Useful validation commands
-
-From Magento root:
-
-```bash
-cd /home/magento/magento
-```
-
-Check Git state:
-
-```bash
-git status
-git log --oneline -8
-```
-
-Check PHP syntax:
-
-```bash
-php -l app/code/Scandiweb/SearchLoss/Model/SearchLossDataProvider.php
-php -l app/code/Scandiweb/SearchLoss/Controller/Adminhtml/Export/All.php
-php -l app/code/Scandiweb/SearchLoss/view/adminhtml/templates/dashboard.phtml
-```
-
-Flush cache:
-
-```bash
-bin/magento cache:flush
-```
-
-Test REST endpoint:
-
-```bash
-curl -s http://localhost/rest/V1/search-loss/dashboard | head -c 1500
-echo
-```
-
-Check that no removable stress-test rows remain:
-
-```bash
-mysql -u root -p -e "
-SELECT COUNT(*) AS sltest_rows
-FROM magento.search_query
-WHERE query_text LIKE 'SLTEST%';
-"
-```
-
-Expected before demo:
-
-```text
-sltest_rows = 0
-```
-
----
-
-## Technical naming note
-
-Visible/admin/commercial labels should use:
-
-```text
-Search Loss Audit
-```
-
-Technical names should remain stable for now:
-
-```text
-Scandiweb_SearchLoss
-app/code/Scandiweb/SearchLoss
-/rest/V1/search-loss/dashboard
-```
-
-Do not perform a full namespace/module rename unless packaging or distribution requires it later.
+- search configuration
+- catalogue data cleanup
+- synonyms/search terms
+- product visibility/assignment fixes
+- GA4/search tracking
+- Adobe Live Search or search platform feasibility
+- workflow or reporting automation
