@@ -9,8 +9,6 @@ $topLowEngagementActions = [];
 $zeroResultRate = 0;
 $lowEngagementFindingTerms = [];
 $lowEngagementSearches = 0;
-$lowEngagementProductEngagementWeightedTotal = 0.0;
-$lowEngagementAverageProductEngagement = 0.0;
 
 foreach ($rankedTerms as $term) {
     $bucket = (string)($term['fixEffortBucket'] ?? 'Manual review');
@@ -43,12 +41,8 @@ foreach ($lowEngagementTerms as $term) {
     $searches = (int)($term['searches'] ?? 0);
     $lowEngagementFindingTerms[] = $term;
     $lowEngagementSearches += $searches;
-    $lowEngagementProductEngagementWeightedTotal += ((float)($term['productEngagementRate'] ?? 0)) * $searches;
 }
 
-if ($lowEngagementSearches > 0) {
-    $lowEngagementAverageProductEngagement = $lowEngagementProductEngagementWeightedTotal / $lowEngagementSearches;
-}
 
 foreach ($lowEngagementFindingTerms as $term) {
     $signal = (string)($term['weaknessSignal'] ?? 'Needs review');
@@ -1771,15 +1765,15 @@ function catalogEvidenceTooltip($label) {
         <summary>
             <div class="searchloss-kpi-panel-title">
                 <h2>Audit Summary</h2>
-                <p>Key failed-search and low-engagement signals for this audit period.</p>
+                <p>Key search-demand and low-engagement signals for this audit period.</p>
             </div>
         </summary>
 
         <div class="searchloss-grid">
         <div class="searchloss-card">
-            <div class="searchloss-label">Failed Terms</div>
+            <div class="searchloss-label">Failed-Search Terms</div>
             <div class="searchloss-value"><?= (int)$summary['failed_terms'] ?></div>
-            <div class="searchloss-help">Unique zero-result terms.</div>
+            <div class="searchloss-help">Unique zero-result search terms.</div>
         </div>
         <div class="searchloss-card">
             <div class="searchloss-label">Failed Searches</div>
@@ -1792,16 +1786,6 @@ function catalogEvidenceTooltip($label) {
             <div class="searchloss-help">Failed-search demand estimate.</div>
         </div>
         <div class="searchloss-card">
-            <div class="searchloss-label"><?= tooltipLabel('AOV', 'Average order value calculated from Magento orders, excluding cancelled orders.') ?></div>
-            <div class="searchloss-value"><?= money($summary['aov']) ?></div>
-            <div class="searchloss-help">From Magento orders.</div>
-        </div>
-        <div class="searchloss-card">
-            <div class="searchloss-label"><?= tooltipLabel('Search-to-order rate', 'Estimated relationship between zero-result search volume and orders. Used for the failed-search demand value model only.') ?></div>
-            <div class="searchloss-value"><?= number_format((float)$summary['conversion_rate'], 1) ?>%</div>
-            <div class="searchloss-help">Failed-search model input.</div>
-        </div>
-        <div class="searchloss-card">
             <div class="searchloss-label">Low-Engagement Terms</div>
             <div class="searchloss-value"><?= number_format(count($lowEngagementFindingTerms)) ?></div>
             <div class="searchloss-help">Result-returning friction terms.</div>
@@ -1811,16 +1795,11 @@ function catalogEvidenceTooltip($label) {
             <div class="searchloss-value"><?= number_format($lowEngagementSearches) ?></div>
             <div class="searchloss-help">Searches with weak engagement.</div>
         </div>
-        <div class="searchloss-card">
-            <div class="searchloss-label"><?= tooltipLabel('Avg Product Engagement', 'Weighted average product-view rate across low-engagement findings. This is an engagement signal, not a revenue estimate.') ?></div>
-            <div class="searchloss-value"><?= number_format($lowEngagementAverageProductEngagement, 1) ?>%</div>
-            <div class="searchloss-help">Low-engagement signal.</div>
-        </div>
         </div>
     </details>
 
     <?php if (!empty($topMoneyActions) || !empty($topLowEngagementActions)): ?>
-        <details class="searchloss-money-actions">
+        <details class="searchloss-money-actions" open>
             <summary>
                 <div class="searchloss-money-actions-title">
                     <h2>Top Review Actions</h2>
